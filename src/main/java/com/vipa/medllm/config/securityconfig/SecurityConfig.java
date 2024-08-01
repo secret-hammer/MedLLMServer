@@ -22,6 +22,8 @@ public class SecurityConfig {
 
     private CustomUserDetailsService customUserDetailsService;
 
+    private JwtAuthenticationEntryPoint customAuthenticationEntryPoint;
+
     @Bean
     public static PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -35,6 +37,8 @@ public class SecurityConfig {
                     authorize.requestMatchers("/user/**").permitAll();
                     authorize.anyRequest().authenticated();
                 })
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(customAuthenticationEntryPoint))
                 .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

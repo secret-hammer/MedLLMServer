@@ -35,11 +35,14 @@ public class Image {
     @org.hibernate.annotations.UpdateTimestamp
     private Timestamp updatedTime;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne
     @JoinColumn(name = "imageGroupId", nullable = false)
     private ImageGroup imageGroup;
 
     @ManyToOne
     @JoinColumn(name = "imageTypeId", nullable = false)
     private ImageType imageType;
+
+    @Version
+    private Integer version;
 }

@@ -32,11 +32,14 @@ public class ImageGroup {
     @org.hibernate.annotations.UpdateTimestamp
     private Timestamp updatedTime;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne
     @JoinColumn(name = "projectId", nullable = false)
     private Project project;
 
     @OneToMany(mappedBy = "imageGroup")
     private List<Image> images = new ArrayList<>();
+
+    @Version
+    private Integer version;
 
 }

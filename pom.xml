@@ -10,10 +10,10 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.vipa</groupId>
-	<artifactId>medlabel</artifactId>
+	<artifactId>medllm</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>medlabel</name>
-	<description>MedLabel Project for vipa</description>
+	<name>medllm</name>
+	<description>MedLLM Project for vipa</description>
 	<url />
 	<licenses>
 		<license />

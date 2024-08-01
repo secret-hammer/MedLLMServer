@@ -71,14 +71,14 @@
 
 ```sql
 # 创建数据库
-CREATE DATABASE MedLabel_dev
+CREATE DATABASE MedLLM_dev
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
 # 设置中国时区
 SET time_zone = '+8:00';
 # 选择数据库
-USE MedLabel_dev;
+USE MedLLM_dev;
 
 # 用户表
 CREATE TABLE User (

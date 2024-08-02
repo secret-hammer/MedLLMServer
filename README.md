@@ -132,7 +132,7 @@ CREATE TABLE Image (
     Status INT NOT NULL DEFAULT 0,                         -- 图片状态，默认为0 （0:未标注，1:已标注，2:标注完成）
     CreatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,       -- 记录创建时间，默认为当前时间
     UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录最后更新时间，默认为当前时间并在更新时自动修改
-  	version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
+    version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
 );
 
 # 大模型任务类型表

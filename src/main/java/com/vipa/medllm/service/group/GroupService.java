@@ -1,5 +1,6 @@
 package com.vipa.medllm.service.group;
 
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.retry.annotation.Backoff;
@@ -11,16 +12,14 @@ import com.vipa.medllm.dto.response.group.UpdateGroupResponse;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.Project;
 import com.vipa.medllm.repository.ImageGroupRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.vipa.medllm.repository.ProjectRepository;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
+import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class GroupService {
@@ -151,7 +150,8 @@ public class GroupService {
     }
 
     @Transactional
-    @Retryable(value = {ObjectOptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100))
+    @Retryable(retryFor = { SQLException.class,
+            OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public List<UpdateGroupResponse> updateGroup(UpdateGroupRequest updateGroupRequest) {
         List<UpdateGroupResponse> updateInfoList = new ArrayList<>();
 

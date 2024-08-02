@@ -1,7 +1,6 @@
 package com.vipa.medllm.dto.request.group;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

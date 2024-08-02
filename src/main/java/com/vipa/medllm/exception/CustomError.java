@@ -1,5 +1,8 @@
 package com.vipa.medllm.exception;
 
+import lombok.Getter;
+
+@Getter
 public enum CustomError {
     INVALID_AUTHENTIFICATION_ERROR(700, "Invalid Authorization header"),
     USERNAME_NOT_FOUND_ERROR(701, "User not exists by Username or Email"),
@@ -26,11 +29,4 @@ public enum CustomError {
         this.message = message;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
 }

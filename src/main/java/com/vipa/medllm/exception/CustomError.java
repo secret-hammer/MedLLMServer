@@ -12,7 +12,11 @@ public enum CustomError {
     UNAUTHORIZED_REQUEST(708, "Unauthorized request"),
 
     ARGUMENT_NOT_VALID(709, "Argument not valid"),
-    INTERNAL_SERVER_ERROR(800, "Internal server error");
+    INTERNAL_SERVER_ERROR(800, "Internal server error"),
+
+    PROJECT_NOT_FOUND(710, "Project not found"),
+    GROUP_NOT_FOUND(711, "Group not found"),
+    INVALID_GROUP_DATA(712, "Invalid group data");
 
     private final String message;
     private final Integer code;

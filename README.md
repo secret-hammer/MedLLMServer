@@ -14,14 +14,14 @@
 
 ## 架构选型
 
-| 架构名称       | 技术栈                                                       |
-| -------------- | ------------------------------------------------------------ |
-| 后端           | Springboot + JPA                                             |
-| 关系型数据库   | MySQL（暂时不需要分库分表）                                  |
-| NoSQL数据库    | Redis，MongoDB（根据需求使用）主要保存一些非持久化数据和缓存数据 |
-| 静态资源服务器 | Ngnix                                                        |
-| 计算服务       | Flask（沿用之前的架构，修改代码                              |
-| 前端           | React                                                        |
+| 架构名称       | 技术栈                                   |
+| -------------- | ---------------------------------------- |
+| 后端           | Springboot + JPA                         |
+| 关系型数据库   | MySQL（暂时不需要分库分表）              |
+| NoSQL数据库    | Redis（缓存），MongoDB（会话数据持久化） |
+| 静态资源服务器 | Ngnix                                    |
+| 计算服务       | Flask（沿用之前的架构，修改代码          |
+| 前端           | React                                    |
 
 ## 架构和软件版本
 
@@ -40,7 +40,7 @@
 
 ### 模块划分
 
-- **用户模块**：负责用户的注册、登录、权限控制、用户数据管理（CRUD）；
+- **用户模块**：负责用户的注册、登录、权限控制、用户数据管理；
 - **数据集模块**：负责数据集信息管理（数据集创建、数据集编辑、条件查询数据集和数据集删除）
 - **组模块**：负责组相关的操作和信息管理（组创建、组信息编辑、组查询、组删除）
 - **图片数据模块**：负责图片数据信息管理
@@ -67,18 +67,18 @@
 ### 数据库创建命令
 
 - 要求数据库定义过程**不包含任何外键约束**！在业务中通过应用层JPA，或纯业务逻辑来进行判断
-- 数据库每一个字段都要设置为**有值**（设置为非空或给定‘N/A’作为默认值，**不允许出现空值！**）
+- 数据库每一个字段都要设置为**有值**（设置为非空或给定‘N/A’作为默认值，**不允许出现空值！**）
 
 ```sql
 # 创建数据库
-CREATE DATABASE MedLLM_dev
+CREATE DATABASE MedLabel_dev
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
 # 设置中国时区
 SET time_zone = '+8:00';
 # 选择数据库
-USE MedLLM_dev;
+USE MedLabel_dev;
 
 # 用户表
 CREATE TABLE User (
@@ -107,7 +107,8 @@ CREATE TABLE Project (
   	UserId INT NOT NULL,																		 -- 关联的用户，外键（不在数据库中设计外键） 
   	ImageTypeId INT NOT NULL,																 -- 关联的图片类型，外键（不在数据库中设计外键）
   	CreatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,         -- 记录创建时间，默认为当前时间
-    UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 记录最后更新时间，默认为当前时间并在更新时自动修改
+    UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录最后更新时间，默认为当前时间并在更新时自动修改
+  	version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
 );
 
 # 图片组表（ImageGroup表，保存图片的最小一级，是Project的子目录）
@@ -117,7 +118,8 @@ CREATE TABLE ImageGroup (
     Description VARCHAR(2000) NOT NULL DEFAULT 'N/A',          -- 图片组描述信息，非空，默认为'N/A'
     ProjectId INT NOT NULL,                                    -- 关联的数据集ID，外键（不在数据库中设计外键）
     CreatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,           -- 记录创建时间，默认为当前时间
-    UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 记录最后更新时间，默认为当前时间并在更新时自动修改
+    UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录最后更新时间，默认为当前时间并在更新时自动修改
+  	version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
 );
 
 # 图片表 
@@ -129,40 +131,62 @@ CREATE TABLE Image (
     ImageTypeId INT NOT NULL,                              -- 关联的图片类型ID，外键（不在数据库中设计外键）
     Status INT NOT NULL DEFAULT 0,                         -- 图片状态，默认为0 （0:未标注，1:已标注，2:标注完成）
     CreatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,       -- 记录创建时间，默认为当前时间
-    UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 记录最后更新时间，默认为当前时间并在更新时自动修改
+    UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录最后更新时间，默认为当前时间并在更新时自动修改
+  	version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
+);
+
+# 大模型任务类型表
+CREATE TABLE LLMTaskType (
+    LLMTaskTypeId INT AUTO_INCREMENT PRIMARY KEY,                -- 自增长的大模型推理任务ID
+    LLMTaskTypeName VARCHAR(255) NOT NULL, 	                     -- 任务名称，非空
+    Prompt VARCHAR(3000) NOT NULL, 											 				 -- 定义具体的prompt
+    Description VARCHAR(3000) NOT NULL,													 -- 任务描述，描述任务具体完成任务和对输入输出的简单描述
 );
 
 ```
 
-```json
+```java
+// MongoDB 文档类型，这里给出springboot的类定义进行格式限定
 // 会话集合
-{
-  "_id": ObjectId("60c72b3f5f1b2c6f4f4e4e4f"),
-  "image_id": 50
-  "session_name": ObjectId("60c72b2f5f1b2c6f4f4e4e4e"),
-  "started_at": ISODate("2023-07-01T12:34:56Z"),
-  "ended_at": ISODate("2023-07-01T13:00:00Z"),
-  "qa_pair_ids": [
-    ObjectId("60c72b4f5f1b2c6f4f4e4e50"),
-    ObjectId("60c72b5f5f1b2c6f4f4e4e51"),
-    ObjectId("60c72b6f5f1b2c6f4f4e4e52")
-  ]
+@Data
+@Document(collection = "sessions")
+public class Session {
+    @Id
+    private String sessionId;
+
+    @NotNull(message = "Image Id is required")
+    private int imageId;
+
+    private Timestamp createdTime;
+
+    private Timestamp updatedTime;
+
+    @DBRef // 这是一个引用指向问答对的集合
+    private List<QAPair> qaPairIds;
 }
 
 // 问答对集合
-{
-  "_id": ObjectId("60c72b4f5f1b2c6f4f4e4e50"),
-  "session_id": ObjectId("60c72b3f5f1b2c6f4f4e4e4f"),
-  "question": {
-    "sender": "user",
-    "message": "Hello, how are you?",
-    "sent_at": ISODate("2023-07-01T12:35:00Z")
-  },
-  "answer": {
-    "sender": "assistant",
-    "message": "I am good, thank you!",
-    "sent_at": ISODate("2023-07-01T12:35:05Z")
-  }
+@Data
+@Document(collection = "qa_pairs")
+public class QAPair {
+
+    @Id
+    private String qaPairId;
+
+    @DBRef
+    private Session sessionId;
+
+    @NotNull(message = "LLM task type id is required")
+    private String llmTaskTypeId;
+
+    private String question;
+
+    private String answer;
+
+    private Timestamp questionTime;
+
+    private Timestamp answerTime;
+
 }
 
 ```

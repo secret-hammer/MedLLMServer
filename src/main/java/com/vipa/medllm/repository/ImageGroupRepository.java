@@ -17,6 +17,6 @@ import java.util.Optional;
 public interface ImageGroupRepository extends JpaRepository<ImageGroup, Integer>, JpaSpecificationExecutor<ImageGroup> {
     boolean existsByImageGroupId(int ImageGroupId);
     Optional<ImageGroup> findAllByImageGroupId(int imageGroupId);
-    List<ImageGroup> findAllByProjectProjectId(int projectId); // todo: 可以通过ProjectId找到吗？
+    List<ImageGroup> findAllByProjectProjectId(int projectId);
 
 }

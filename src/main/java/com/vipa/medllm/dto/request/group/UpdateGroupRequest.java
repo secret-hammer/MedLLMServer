@@ -15,10 +15,10 @@ public class UpdateGroupRequest {
     @Data
     public static class GroupDetail {
         @NotNull(message = "Group ID cannot be null")
-        private String groupId;
+        private int groupId;
 
         @NotNull(message = "Group ID cannot be null")
-        private String projectId;
+        private int projectId;
 
         @NotNull(message = "Group name cannot be null")
         private String name;

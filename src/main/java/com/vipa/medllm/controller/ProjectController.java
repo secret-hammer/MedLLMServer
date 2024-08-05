@@ -46,7 +46,7 @@ public class ProjectController {
         // 批量更新数据集
         projectService.updateProjects(projectInfoList);
 
-        ResponseResult<Object> response = new ResponseResult<>(200, "Project updated successfully");
+        ResponseResult<Object> response = new ResponseResult<>(200, "Projects updated successfully");
 
         return ResponseEntity.ok(response);
     }

@@ -3,14 +3,12 @@ package com.vipa.medllm.controller;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.response.ResponseResult;
-import com.vipa.medllm.dto.response.group.UpdateGroupResponse;
 import com.vipa.medllm.service.group.GroupService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @AllArgsConstructor
@@ -20,8 +18,8 @@ public class GroupController {
 
     @GetMapping("/search")
     public ResponseEntity<ResponseResult<Object>> searchGroup(
-            @RequestParam(required = false) String projectId,
-            @RequestParam(required = false) String groupId,
+            @RequestParam(required = false) Integer projectId,
+            @RequestParam(required = false) Integer groupId,
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String groupDescription) {
 
@@ -41,10 +39,10 @@ public class GroupController {
     }
 
     @PostMapping("/update")
-    public ResponseEntity<ResponseResult<List<UpdateGroupResponse>>> updateGroup(@Valid @RequestBody UpdateGroupRequest updateGroupRequest) {
+    public ResponseEntity<ResponseResult<Object>> updateGroup(@Valid @RequestBody UpdateGroupRequest updateGroupRequest) {
 
-        List<UpdateGroupResponse> updateInfoList = groupService.updateGroup(updateGroupRequest);
-        ResponseResult<List<UpdateGroupResponse>> response = new ResponseResult<>(200, "Group update status", updateInfoList);
+        groupService.updateGroup(updateGroupRequest);
+        ResponseResult<Object> response = new ResponseResult<>(200, "Groups updated successfully");
 
         return ResponseEntity.ok(response);
     }

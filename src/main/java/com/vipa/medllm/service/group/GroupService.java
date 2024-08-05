@@ -8,7 +8,6 @@ import org.springframework.retry.annotation.Retryable;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.response.group.ResponseGetGroups;
-import com.vipa.medllm.dto.response.group.UpdateGroupResponse;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.Project;
 import com.vipa.medllm.repository.ImageGroupRepository;
@@ -33,14 +32,13 @@ public class GroupService {
     }
 
     @Transactional
-    public ResponseGetGroups searchGroup(String projectId, String groupId, String groupName, String groupDescription) {
+    public ResponseGetGroups searchGroup(Integer  projectId, Integer  groupId, String groupName, String groupDescription) {
         // 第一步：如果groupId不为空，则直接搜索
-        if (groupId != null && !groupId.isEmpty()) {
-            int parsedGroupId = parseToInt(groupId);
-            ImageGroup group = imageGroupRepository.findById(parsedGroupId).orElse(null);
+        if (groupId != null) { //如果groupId不传的话，groupId为空的话
+            ImageGroup group = imageGroupRepository.findById(groupId).orElse(null);
             if (group != null && (groupName == null || group.getImageGroupName().contains(groupName))
                     && (groupDescription == null || group.getDescription().contains(groupDescription))
-                    && (projectId == null || projectId.isEmpty() || group.getProject().getProjectId() == parseToInt(projectId))) {
+                    && (projectId == null || group.getProject().getProjectId() == projectId)) {
                 return new ResponseGetGroups(List.of(new ResponseGetGroups.GroupDTO(
                         group.getImageGroupId(),
                         group.getImageGroupName(),
@@ -56,9 +54,9 @@ public class GroupService {
         Specification<ImageGroup> spec = (root, query, criteriaBuilder) -> {
             Specification<ImageGroup> criteria = Specification.where(null);
 
-            if (projectId != null && !projectId.isEmpty()) {
+            if (projectId != null) {
                 criteria = criteria.and((root1, query1, cb) ->
-                        cb.equal(root1.get("project").get("projectId"), parseToInt(projectId)));
+                        cb.equal(root1.get("project").get("projectId"), projectId));
             }
             if (groupName != null && !groupName.isEmpty()) {
                 criteria = criteria.and((root1, query1, cb) ->
@@ -123,26 +121,17 @@ public class GroupService {
     }
 
 
-    private Integer parseToInt(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            // 抛出异常RuntimeException
-            throw new RuntimeException(String.format("Invalid int value: %s", value));
-        }
-    }
-
     @Transactional
     public void createGroup(CreateGroupRequest createGroupRequest) {
-        Project project = projectRepository.findByProjectId(parseToInt(createGroupRequest.getProjectId()))
+        Project project = projectRepository.findByProjectId(createGroupRequest.getProjectId())
                 .orElseThrow(() -> new CustomException(CustomError.PROJECT_NOT_FOUND));
 
         List<CreateGroupRequest.GroupDetail> targetGroups = createGroupRequest.getTargetGroups();
 
         for (CreateGroupRequest.GroupDetail targetGroup : targetGroups) {
             ImageGroup imageGroup = new ImageGroup();
-            imageGroup.setImageGroupName(targetGroup.getName() == null ? "N/A" : targetGroup.getName());
-            imageGroup.setDescription(targetGroup.getDescription() == null ? "N/A" : targetGroup.getDescription());
+            imageGroup.setImageGroupName(targetGroup.getName());
+            if (targetGroup.getDescription() != null) imageGroup.setDescription(targetGroup.getDescription());
             imageGroup.setProject(project);
 
             imageGroupRepository.save(imageGroup);
@@ -150,44 +139,27 @@ public class GroupService {
     }
 
     @Transactional
-    @Retryable(retryFor = { SQLException.class,
-            OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
-    public List<UpdateGroupResponse> updateGroup(UpdateGroupRequest updateGroupRequest) {
-        List<UpdateGroupResponse> updateInfoList = new ArrayList<>();
-
+    @Retryable(retryFor = { SQLException.class, OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
+    public void updateGroup(UpdateGroupRequest updateGroupRequest) {
         updateGroupRequest.getTargetGroups().forEach(groupDetail -> {
-            UpdateGroupResponse response = new UpdateGroupResponse();
-            response.setGroupId(groupDetail.getGroupId());
-
-            Optional<ImageGroup> optionalGroup = imageGroupRepository.findAllByImageGroupId(Integer.parseInt(groupDetail.getGroupId()));
+            Optional<ImageGroup> optionalGroup = imageGroupRepository.findAllByImageGroupId(groupDetail.getGroupId());
             if (optionalGroup.isPresent()) {
                 ImageGroup group = optionalGroup.get();
                 Project currentProject = group.getProject();
-                int newProjectId = Integer.parseInt(groupDetail.getProjectId());
+                int newProjectId = groupDetail.getProjectId();
 
                 if (currentProject.getProjectId() != newProjectId) {
-                    Optional<Project> newProject = projectRepository.findById(newProjectId);
-                    if (newProject.isEmpty()) {
-                        response.setStatusMessage("ProjectId " + groupDetail.getProjectId() + " not found");
-                        updateInfoList.add(response);
-                        return;
-                    } else {
-                        group.setProject(newProject.get());
-                    }
+                    Project newProject = projectRepository.findById(newProjectId)
+                            .orElseThrow(() -> new RuntimeException("ProjectId " + groupDetail.getProjectId() + " not found"));
+                    group.setProject(newProject);
                 }
 
                 group.setImageGroupName(groupDetail.getName());
                 group.setDescription(groupDetail.getDescription());
                 imageGroupRepository.save(group);
-
-                response.setStatusMessage("success");
-                updateInfoList.add(response);
             } else {
-                response.setStatusMessage("Group not found with id: " + groupDetail.getGroupId());
-                updateInfoList.add(response);
+                throw new RuntimeException("Group not found with id: " + groupDetail.getGroupId());
             }
         });
-
-        return updateInfoList;
     }
 }

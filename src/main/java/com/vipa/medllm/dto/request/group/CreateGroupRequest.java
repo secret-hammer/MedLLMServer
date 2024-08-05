@@ -1,6 +1,7 @@
 package com.vipa.medllm.dto.request.group;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -10,9 +11,10 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CreateGroupRequest {
     @NotNull(message = "Project ID cannot be null")
-    private String projectId;
+    private int projectId;
 
     @NotNull(message = "Target groups cannot be null")
+    @Valid
     private List<GroupDetail> targetGroups;
 
     @Data
@@ -20,7 +22,6 @@ public class CreateGroupRequest {
         @NotNull(message = "Group name cannot be null")
         private String name;
 
-        @NotNull(message = "Group description cannot be null")
         private String description;
     }
 }

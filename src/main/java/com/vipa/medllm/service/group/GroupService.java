@@ -1,5 +1,8 @@
 package com.vipa.medllm.service.group;
 
+import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
+import com.vipa.medllm.model.Image;
+import com.vipa.medllm.repository.ImageRepository;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -15,7 +18,9 @@ import org.springframework.stereotype.Service;
 import com.vipa.medllm.repository.ProjectRepository;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
+import com.vipa.medllm.service.image.ImageService;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.sql.SQLException;
 import java.util.*;
@@ -25,14 +30,16 @@ public class GroupService {
 
     private final ImageGroupRepository imageGroupRepository;
     private final ProjectRepository projectRepository;
+    private final ImageRepository imageRepository;
 
-    public GroupService(ImageGroupRepository imageGroupRepository, ProjectRepository projectRepository) {
+    public GroupService(ImageGroupRepository imageGroupRepository, ProjectRepository projectRepository, ImageRepository imageRepository) {
         this.imageGroupRepository = imageGroupRepository;
         this.projectRepository = projectRepository;
+        this.imageRepository = imageRepository;
     }
 
     @Transactional
-    public ResponseGetGroups searchGroup(Integer  projectId, Integer  groupId, String groupName, String groupDescription) {
+    public ResponseGetGroups searchGroup(Integer projectId, Integer groupId, String groupName, String groupDescription) {
         // 第一步：如果groupId不为空，则直接搜索
         if (groupId != null) { //如果groupId不传的话，groupId为空的话
             ImageGroup group = imageGroupRepository.findById(groupId).orElse(null);
@@ -120,6 +127,23 @@ public class GroupService {
         return new ResponseGetGroups(new ArrayList<>(sortedGroups));
     }
 
+    @Transactional
+    public void deleteGroup(DeleteGroupRequest deleteGroupRequest) {
+        ImageGroup imageGroup = imageGroupRepository.findById(deleteGroupRequest.getGroupId()).orElse(null);
+        if (imageGroup == null) {
+            throw new CustomException(CustomError.IMAGE_GROUP_ID_NOT_FOUND);
+        }
+
+        List<Image> images = imageRepository.findByImageGroupImageGroupId(deleteGroupRequest.getGroupId());
+        for (Image image : images) {
+            ImageService.deleteImageFolder(image);
+            imageRepository.delete(image);
+        }
+
+        imageGroupRepository.delete(imageGroup);
+
+    }
+
 
     @Transactional
     public void createGroup(CreateGroupRequest createGroupRequest) {
@@ -139,7 +163,7 @@ public class GroupService {
     }
 
     @Transactional
-    @Retryable(retryFor = { SQLException.class, OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
+    @Retryable(retryFor = {SQLException.class, OptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void updateGroup(UpdateGroupRequest updateGroupRequest) {
         updateGroupRequest.getTargetGroups().forEach(groupDetail -> {
             Optional<ImageGroup> optionalGroup = imageGroupRepository.findAllByImageGroupId(groupDetail.getGroupId());

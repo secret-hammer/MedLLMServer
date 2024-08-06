@@ -1,6 +1,7 @@
 package com.vipa.medllm.controller;
 
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
+import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.response.ResponseResult;
 import com.vipa.medllm.service.group.GroupService;
@@ -8,6 +9,8 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @RestController
@@ -43,6 +46,15 @@ public class GroupController {
 
         groupService.updateGroup(updateGroupRequest);
         ResponseResult<Object> response = new ResponseResult<>(200, "Groups updated successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/delete")
+    public ResponseEntity<ResponseResult<List<String>>> deleteGroups(@RequestBody DeleteGroupRequest deleteGroupRequest) {
+
+        groupService.deleteGroup(deleteGroupRequest);
+        ResponseResult<List<String>> response = new ResponseResult<>(200, "Group delete process completed");
 
         return ResponseEntity.ok(response);
     }

@@ -1,12 +1,15 @@
 package com.vipa.medllm.service.image;
 
 import com.vipa.medllm.dto.request.image.DeleteImageRequest;
+import com.vipa.medllm.exception.CustomError;
+import com.vipa.medllm.exception.CustomException;
 import com.vipa.medllm.model.Image;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.ImageType;
 import com.vipa.medllm.repository.ImageGroupRepository;
 import com.vipa.medllm.repository.ImageRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -17,9 +20,6 @@ import com.vipa.medllm.repository.ImageTypeRepository;
 import com.vipa.medllm.util.ImageValidator;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 import lombok.AllArgsConstructor;
 
@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @AllArgsConstructor
 public class ImageService {
@@ -71,25 +72,23 @@ public class ImageService {
     }
 
     @Transactional
-    public List<String> deleteImages(DeleteImageRequest deleteImageRequest) {
-        List<String> results = new ArrayList<>();
-
+    public void deleteImages(DeleteImageRequest deleteImageRequest) {
+        List<Image> images = new ArrayList<>(List.of());
         for (Integer imageId : deleteImageRequest.getImageIds()) {
             // 如果找不到不要报错
             Image image = imageRepository.findById(imageId).orElse(null);
-            if (image == null) {
-                results.add("Failed: " + imageId + " - Image not found");
-                continue;
-            }
-
-            imageRepository.delete(image);
-            if (deleteImageFolder(image)) results.add("Deleted successfully!");
-            else results.add("Failed: " + image.getImageUrl() + " - Failed to delete image folder");
+            if (image == null)  //CustomError.IMAGE_ID_NOT_FOUND
+                throw new CustomException(CustomError.IMAGE_ID_NOT_FOUND);
+            images.add(image);
         }
-        return results;
+        for (Image image : images) {
+            imageRepository.delete(image);
+            if (!deleteImageFolder(image)) //直接记录日志：log.error
+                log.error("Cannot find target dictory with this URL: " + image.getImageUrl());
+        }
     }
 
-    private Boolean deleteImageFolder(Image image) {
+    public static Boolean deleteImageFolder(Image image) {
         String projectName = image.getImageGroup().getProject().getProjectName();
         String folderPath = String.format("./medllm_dev/projects/%d-%s/%d-%s", image.getImageGroup().getProject().getProjectId(), projectName, image.getImageId(), image.getImageName());
 
@@ -97,7 +96,7 @@ public class ImageService {
         return deleteDirectory(folder);
     }
 
-    private Boolean deleteDirectory(File directory) {
+    public static Boolean deleteDirectory(File directory) {
         if (directory.isDirectory()) {
             File[] files = directory.listFiles();
             if (files != null) {

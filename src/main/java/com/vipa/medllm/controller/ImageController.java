@@ -30,8 +30,8 @@ public class ImageController {
     @PostMapping("/delete")
     public ResponseEntity<ResponseResult<List<String>>> deleteImages(@RequestBody DeleteImageRequest deleteImageRequest) {
 
-        List<String> results = imageService.deleteImages(deleteImageRequest);
-        ResponseResult<List<String>> response = new ResponseResult<>(200, "Image delete process completed", results);
+        imageService.deleteImages(deleteImageRequest);
+        ResponseResult<List<String>> response = new ResponseResult<>(200, "Image delete process completed");
 
         return ResponseEntity.ok(response);
     }

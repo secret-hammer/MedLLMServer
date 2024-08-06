@@ -4,7 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum CustomError {
-    INVALID_AUTHENTIFICATION_ERROR(700, "Invalid Authorization header"),
+    INVALID_AUTHENTICATION_ERROR(700, "Invalid Authorization header"),
     USERNAME_NOT_FOUND_ERROR(701, "User not exists by Username or Email"),
     USERNAME_ALREADY_EXISTS(702, "Username already exists"),
     EMAIL_ALREADY_EXISTS(703, "Email already exists"),
@@ -14,6 +14,8 @@ public enum CustomError {
     EMPTY_JWT_CLAIM(707, "Empty JWT claim"),
     UNAUTHORIZED_REQUEST(708, "Unauthorized request"),
     IMAGE_NOT_FOUND(709, "Image not found"),
+    INVALID_IMAGE_URL(709, "Invalid image url"),
+
 
     PROJECT_NOT_FOUND(710, "Project not found"),
     GROUP_NOT_FOUND(711, "Group not found"),

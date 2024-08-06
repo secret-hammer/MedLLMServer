@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import jakarta.persistence.*;
+
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -18,7 +19,7 @@ public class Image {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int imageId;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, unique = true, length = 255)
     private String imageUrl;
 
     @Column(nullable = false, length = 255)

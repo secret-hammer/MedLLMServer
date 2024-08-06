@@ -98,6 +98,9 @@ CREATE TABLE ImageType (
     ImageTypeName VARCHAR(50) NOT NULL,
     ImageExtensions VARCHAR(500) NOT NULL
 );
+INSERT INTO ImageType (ImageTypeName, ImageExtensions)
+VALUES
+('病理图', '["mrxs", "tif"]');
 
 # 数据集表 (现在的数据集表表达一个较大的概念，在编码时将其设定为和ImageGroup表的父目录，形成两层目录来确定一组图片)
 CREATE TABLE Project (
@@ -132,16 +135,33 @@ CREATE TABLE Image (
     Status INT NOT NULL DEFAULT 0,                         -- 图片状态，默认为0 （0:未标注，1:已标注，2:标注完成）
     CreatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,       -- 记录创建时间，默认为当前时间
     UpdatedTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 记录最后更新时间，默认为当前时间并在更新时自动修改
-    version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
+  	version INT NOT NULL DEFAULT 0                      -- 版本号，用于实现乐观锁
 );
 
 # 大模型任务类型表
 CREATE TABLE LLMTaskType (
     LLMTaskTypeId INT AUTO_INCREMENT PRIMARY KEY,                -- 自增长的大模型推理任务ID
     LLMTaskTypeName VARCHAR(255) NOT NULL, 	                     -- 任务名称，非空
+  	isPreProcessTask TINYINT NOT NULL,												   -- 是否为预处理任务
     Prompt VARCHAR(3000) NOT NULL, 											 				 -- 定义具体的prompt
     Description VARCHAR(3000) NOT NULL,													 -- 任务描述，描述任务具体完成任务和对输入输出的简单描述
 );
+
+INSERT INTO LLMTaskType (LLMTaskTypeName, isPreProcessTask, Prompt, Description)
+VALUES 
+('实时问答任务', 0, 'N/A', '由用户输入决定'),
+
+('病变区域分割任务', 1, 'Can you confirm if this pathology picture has cancerous areas? If it does, please indicate their edges.', '识别病理图中的癌症区域，给出癌变区域掩码，并分型分级给出类别标签。输出：1.类别标签 2.癌变区域掩码'),
+
+('脉管癌栓检测任务', 1, 'Please identify and create bounding boxes around every blood vessel visible in this image, including both large and small vessels.', '识别并检测血管位置，并对癌细胞核进行检测和计数。输出：1.血管检测框 2.癌细胞核检测框和计数'),
+
+('神经侵犯检测任务', 1, 'Please locate and highlight every nerve visible in this pathology image.', '识别并检测神经位置，判断血管是否有侵犯。输出：1.神经检测框 2.是否侵犯【二分类标签】'),
+
+('淋巴结转移分割任务',1, 'Could you analyze and segment all the cancerous regions in the lymph node shown in this image?', '识别淋巴结区域，给出转移区域掩码，并给出是否转移的二分类标签。输出：1.淋巴结区域分割 2.是否转移【二分类标签】'),
+
+('肝组织病变区域分割任务', 1, 'Please identify and segment the diagnostic area in this image.','识别周围肝组织，给出病变区域掩码，并给出是否病变的类别标签。输出：1.类别标签 2.病变区域掩码'),
+
+('细胞核检测任务', 1, 'Find all epithelial cell nuclei and neoplastic cell nuclei in the pathology image and represent each with a bounding box, using [x1, y1, x2, y2] for coordinates scaled to a scale of 0 to 100 as integers.', '识别并检测细胞核位置，并给出细胞核类别。输出：1.类别标签 2.细胞核检测框');
 
 ```
 
@@ -152,18 +172,37 @@ CREATE TABLE LLMTaskType (
 @Document(collection = "sessions")
 public class Session {
     @Id
-    private String sessionId;
+    private ObjectId sessionId;
 
     @NotNull(message = "Image Id is required")
-    private int imageId;
+    private Integer imageId;
 
     private Timestamp createdTime;
 
     private Timestamp updatedTime;
 
-    @DBRef // 这是一个引用指向问答对的集合
-    private List<QAPair> qaPairIds;
+    @DBRef // 这是一个引用指向历史问答对的列表，按顺序存放
+    private List<QAPair> qaPairHistoryList;
+
+    @NotNull(message = "User Id is required")
+    private Integer userId; // 直接关联用户ID，避免多级关联访问
+
+    @NotNull(message = "Status is required")
+    // 0:代表刚刚上传；
+    // 1:代表大模型预推理结束（病理图处理未结束）
+    // 2:代表病理图处理结束（大模型预推理未结束）
+    // 3:代表病理图预处理全部完成，处于可用交互状态
+    // 4:病理图已经被删除，会话处于废弃状态，但仍然保留
+    private Integer status;
+
+    @Version
+    private Integer version;
+
+    public String getSessionId() {
+        return sessionId.toHexString();
+    }
 }
+
 
 // 问答对集合
 @Data
@@ -171,13 +210,13 @@ public class Session {
 public class QAPair {
 
     @Id
-    private String qaPairId;
+    private ObjectId qaPairId;
 
     @DBRef
-    private Session sessionId;
+    private Session session;
 
     @NotNull(message = "LLM task type id is required")
-    private String llmTaskTypeId;
+    private Integer llmTaskTypeId;
 
     private String question;
 
@@ -187,6 +226,12 @@ public class QAPair {
 
     private Timestamp answerTime;
 
+    @Version
+    private Integer version;
+
+    public String getQAPairId() {
+        return qaPairId.toHexString();
+    }
 }
 
 ```

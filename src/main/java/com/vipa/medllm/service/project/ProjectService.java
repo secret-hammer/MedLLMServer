@@ -1,5 +1,9 @@
 package com.vipa.medllm.service.project;
 
+import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
+import com.vipa.medllm.model.*;
+import com.vipa.medllm.repository.*;
+import com.vipa.medllm.service.image.ImageService;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.retry.annotation.Backoff;
@@ -11,12 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vipa.medllm.dto.request.project.CreateProjectInfo;
 import com.vipa.medllm.dto.request.project.UpdateProjectInfo;
-import com.vipa.medllm.model.ImageType;
-import com.vipa.medllm.model.Project;
-import com.vipa.medllm.model.User;
-import com.vipa.medllm.repository.ImageTypeRepository;
-import com.vipa.medllm.repository.ProjectRepository;
-import com.vipa.medllm.repository.UserRepository;
 
 import lombok.AllArgsConstructor;
 
@@ -30,6 +28,9 @@ public class ProjectService {
     private ProjectRepository projectRepository;
     private UserRepository userRepository;
     private ImageTypeRepository imageTypeRepository;
+    private final ImageGroupRepository imageGroupRepository;
+    private final ImageRepository imageRepository;
+    private final ImageService imageService;
 
     @Transactional
     public void createProjects(List<CreateProjectInfo> projectInfoList) {
@@ -54,8 +55,8 @@ public class ProjectService {
     }
 
     @Transactional
-    @Retryable(retryFor = { SQLException.class,
-            OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
+    @Retryable(retryFor = {SQLException.class,
+            OptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void updateProjects(List<UpdateProjectInfo> projectInfoList) {
         // 批量更新数据集,按事务处理
         for (UpdateProjectInfo updateProjectInfo : projectInfoList) {
@@ -70,6 +71,7 @@ public class ProjectService {
         }
     }
 
+    @Transactional
     public List<Project> searchProjects(Integer projectId, String projectName) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
@@ -88,6 +90,36 @@ public class ProjectService {
         }
 
         return projectRepository.findAll(spec);
+    }
+
+    // deleteProject: 删除单个project
+    @Transactional
+    public void deleteProject(Integer projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        List<ImageGroup> imageGroups = imageGroupRepository.findAllByProjectProjectId(projectId);
+        for (ImageGroup imageGroup : imageGroups) {
+            DeleteGroupRequest deleteGroupRequest = new DeleteGroupRequest();
+            deleteGroupRequest.setGroupId(imageGroup.getImageGroupId());
+
+            deleteGroup(deleteGroupRequest);
+        }
+
+        projectRepository.delete(project);
+    }
+
+    public void deleteGroup(DeleteGroupRequest deleteGroupRequest) {
+        ImageGroup imageGroup = imageGroupRepository.findById(deleteGroupRequest.getGroupId())
+                .orElseThrow(() -> new RuntimeException("Image group not found"));
+
+        List<Image> images = imageRepository.findByImageGroupImageGroupId(deleteGroupRequest.getGroupId());
+        for (Image image : images) {
+            ImageService.deleteImageFolder(image);
+            imageRepository.delete(image);
+        }
+
+        imageGroupRepository.delete(imageGroup);
     }
 
 }

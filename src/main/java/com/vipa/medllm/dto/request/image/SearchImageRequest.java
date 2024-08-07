@@ -7,11 +7,15 @@ import lombok.Data;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class UpdateImageInfo {
+public class SearchImageRequest {
+    private Integer imageId;
+    
     @NotNull(message = "Image Id cannot be null")
-    private Integer ImageId;
+    private Integer imageGroupId;
 
-    private Integer newImageGroupId;
+    private String imageName;
 
-    private String newImageName;
+    private String imageUrl;
+
+    private Integer imageTypeId;
 }

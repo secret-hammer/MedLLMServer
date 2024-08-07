@@ -2,6 +2,7 @@ package com.vipa.medllm.service.image;
 
 import com.vipa.medllm.dto.request.image.DeleteImageRequest;
 import com.vipa.medllm.dto.request.image.UpdateImageInfo;
+import com.vipa.medllm.dto.request.image.SearchImageRequest;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
 import com.vipa.medllm.model.Image;
@@ -16,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -93,21 +96,67 @@ public class ImageService {
     }
 
     @Transactional
-    public List<Image> searchImages(Integer projectId, Integer groupId) {
-        List<Image> imageList = new ArrayList<>();
-        if (projectId != null && groupId == null) {
-            // 先根据project查找对应的组
-            List<ImageGroup> imageGroups = imageGroupRepository.findAllByProjectProjectId(projectId);
-            // 再根据组获取图片
-            for (ImageGroup imageGroup : imageGroups) {
-                List<Image> images = imageRepository.findByImageGroupImageGroupId(imageGroup.getImageGroupId());
-                imageList.addAll(images);
-            }
-        } else if (projectId != null && groupId != null) {
-            // 直接获取图片
-            imageList = imageRepository.findByImageGroupImageGroupId(groupId);
+    public List<Image> searchImages(SearchImageRequest searchImageRequest) {
+        Specification<Image> spec = Specification.where(null);
+
+        if(searchImageRequest.getImageGroupId() != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageGroupId"), searchImageRequest.getImageGroupId()));
         }
-        return imageList;
+
+        if(searchImageRequest.getImageId() != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageId"), searchImageRequest.getImageId()));
+        }
+
+        if(searchImageRequest.getImageTypeId()!=null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageTypeId"), searchImageRequest.getImageTypeId()));
+        }
+
+        if(searchImageRequest.getImageName()!=null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageName"), "%" + searchImageRequest.getImageTypeId() + "%"));
+        }
+
+        if(searchImageRequest.getImageUrl() != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageUrl"), "%" + searchImageRequest.getImageUrl() + "%"));
+        }
+
+        List<Image> selectedImages = imageRepository.findAll(spec);
+
+        // 对 selectedImages 进行排序，将精确匹配的放前面，模糊匹配的放后面
+        List<Image> sortedImages = selectedImages.stream()
+        .sorted((i1, i2) -> {
+            int i1Match = 0, i2Match = 0;
+
+            if (searchImageRequest.getImageName() != null && !searchImageRequest.getImageName().isEmpty()) {
+                if (i1.getImageName().equals(searchImageRequest.getImageName())) {
+                    i1Match += 2;
+                } else if (i1.getImageName().contains(searchImageRequest.getImageName())) {
+                    i1Match += 1;
+                }
+                if (i2.getImageName().equals(searchImageRequest.getImageName())) {
+                    i2Match += 2;
+                } else if (i2.getImageName().contains(searchImageRequest.getImageName())) {
+                    i2Match += 1;
+                }
+            }
+
+            if (searchImageRequest.getImageUrl() != null && !searchImageRequest.getImageUrl().isEmpty()) {
+                if (i1.getImageUrl().equals(searchImageRequest.getImageUrl())) {
+                    i1Match += 2;
+                } else if (i1.getImageUrl().contains(searchImageRequest.getImageUrl())) {
+                    i1Match += 1;
+                }
+                if (i2.getImageUrl().equals(searchImageRequest.getImageUrl())) {
+                    i2Match += 2;
+                } else if (i2.getImageUrl().contains(searchImageRequest.getImageUrl())) {
+                    i2Match += 1;
+                }
+            }
+
+            return Integer.compare(i2Match, i1Match); // 按匹配程度降序排列
+        }).toList();
+
+
+        return sortedImages;
     }
 
     @Transactional

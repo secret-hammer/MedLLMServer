@@ -2,6 +2,7 @@ package com.vipa.medllm.controller;
 
 import com.vipa.medllm.dto.request.image.DeleteImageRequest;
 import com.vipa.medllm.dto.request.image.UpdateImageInfo;
+import com.vipa.medllm.dto.request.image.SearchImageRequest;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,9 +45,9 @@ public class ImageController {
 
     @GetMapping("search")
     public ResponseEntity<ResponseResult<List<Image>>> searchImages(
-            @RequestParam(required = true) Integer projectId, @RequestParam(required = false) Integer groupId) {
+            @Valid @RequestBody SearchImageRequest searchImageRequest) {
 
-        List<Image> images = imageService.searchImages(projectId, groupId);
+        List<Image> images = imageService.searchImages(searchImageRequest);
 
         ResponseResult<List<Image>> response = new ResponseResult<>(200, "Image search successfully", images);
 

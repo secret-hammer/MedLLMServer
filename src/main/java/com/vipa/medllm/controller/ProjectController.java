@@ -65,7 +65,7 @@ public class ProjectController {
 
     @PostMapping("/delete")
     public ResponseEntity<ResponseResult<Object>> deleteProject(
-            @Valid @NotNull @RequestBody Integer projectId) {
+            @RequestParam(required = true) Integer projectId) {
 
         projectService.deleteProject(projectId);
         ResponseResult<Object> response = new ResponseResult<>(200, "Group delete process completed");

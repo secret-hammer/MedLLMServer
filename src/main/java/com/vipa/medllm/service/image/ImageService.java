@@ -1,6 +1,7 @@
 package com.vipa.medllm.service.image;
 
 import com.vipa.medllm.dto.request.image.DeleteImageRequest;
+import com.vipa.medllm.dto.request.image.UpdateImageInfo;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
 import com.vipa.medllm.model.Image;
@@ -75,8 +76,8 @@ public class ImageService {
 
     private void createImageFolder(Image image) {
         Project project = image.getImageGroup().getProject();
-        String folderPath = String.format(projectResourcePath + "/projects/%d-%s/%d-%s", project.getProjectId(),
-                project.getProjectName(), image.getImageId(), image.getImageName());
+        String folderPath = String.format(projectResourcePath + "/projects/%d/%d", project.getProjectId(),
+                image.getImageId());
 
         Path dir = Paths.get(folderPath);
         if (Files.exists(dir)) {
@@ -88,6 +89,46 @@ public class ImageService {
                 log.error(
                         "com.vipa.medllm.service.image.createImageFolder: Error creating image folder: " + folderPath);
             }
+        }
+    }
+
+    @Transactional
+    public List<Image> searchImages(Integer projectId, Integer groupId) {
+        List<Image> imageList = new ArrayList<>();
+        if (projectId != null && groupId == null) {
+            // 先根据project查找对应的组
+            List<ImageGroup> imageGroups = imageGroupRepository.findAllByProjectProjectId(projectId);
+            // 再根据组获取图片
+            for (ImageGroup imageGroup : imageGroups) {
+                List<Image> images = imageRepository.findByImageGroupImageGroupId(imageGroup.getImageGroupId());
+                imageList.addAll(images);
+            }
+        } else if (projectId != null && groupId != null) {
+            // 直接获取图片
+            imageList = imageRepository.findByImageGroupImageGroupId(groupId);
+        }
+        return imageList;
+    }
+
+    @Transactional
+    @Retryable(retryFor = {
+            ObjectOptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
+    public void updateImage(List<UpdateImageInfo> updateImageRequest) {
+        for (UpdateImageInfo updateImageInfo : updateImageRequest) {
+            Image image = imageRepository.findById(updateImageInfo.getImageId())
+                    .orElseThrow(() -> new CustomException(CustomError.IMAGE_ID_NOT_FOUND));
+
+            if (updateImageInfo.getNewImageGroupId() > 0) {
+                ImageGroup imageGroup = imageGroupRepository.findById(updateImageInfo.getNewImageGroupId())
+                        .orElseThrow(() -> new CustomException(CustomError.GROUP_NOT_FOUND));
+                image.setImageGroup(imageGroup);
+            }
+            if (updateImageInfo.getNewImageName() != null && !updateImageInfo.getNewImageName().isEmpty()) {
+                image.setImageName(updateImageInfo.getNewImageName());
+            }
+
+            // 保存更新后的实体
+            imageRepository.save(image);
         }
     }
 
@@ -109,8 +150,8 @@ public class ImageService {
 
     public void deleteImageFolder(Image image) {
         Project project = image.getImageGroup().getProject();
-        String folderPath = String.format(projectResourcePath + "/projects/%d-%s/%d-%s", project.getProjectId(),
-                project.getProjectName(), image.getImageId(), image.getImageName());
+        String folderPath = String.format(projectResourcePath + "/projects/%d/%d", project.getProjectId(),
+                image.getImageId());
 
         Path dir = Paths.get(folderPath);
         if (Files.notExists(dir)) {

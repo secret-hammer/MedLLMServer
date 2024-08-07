@@ -64,14 +64,14 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/delete")
-    public ResponseEntity<ResponseResult<List<String>>> deleteGroups(@RequestBody DeleteProjectRequest deleteProjectRequest) {
+    // @PostMapping("/delete")
+    // public ResponseEntity<ResponseResult<List<String>>> deleteGroups(@RequestBody DeleteProjectRequest deleteProjectRequest) {
 
-        projectService.deleteProject(deleteProjectRequest.getProjectId());
-        ResponseResult<List<String>> response = new ResponseResult<>(200, "Group delete process completed");
+    //     projectService.deleteProject(deleteProjectRequest.getProjectId());
+    //     ResponseResult<List<String>> response = new ResponseResult<>(200, "Group delete process completed");
 
-        return ResponseEntity.ok(response);
-    }
+    //     return ResponseEntity.ok(response);
+    // }
 
     // @PostMapping("/delete")
     // public ResponseEntity<ResponseResult<Object>> deleteProjects(@RequestParam

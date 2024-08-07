@@ -122,8 +122,6 @@ public class GroupService {
                 })
                 .toList();
 
-//        Set<ResponseGetGroups.GroupDTO> uniqueGroups = new LinkedHashSet<>(sortedGroups);
-
         return new ResponseGetGroups(new ArrayList<>(sortedGroups));
     }
 

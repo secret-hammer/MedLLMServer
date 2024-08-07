@@ -71,44 +71,44 @@ public class ImageService {
         }
     }
 
-    @Transactional
-    public void deleteImages(DeleteImageRequest deleteImageRequest) {
-        List<Image> images = new ArrayList<>(List.of());
-        for (Integer imageId : deleteImageRequest.getImageIds()) {
-            // 如果找不到不要报错
-            Image image = imageRepository.findById(imageId).orElse(null);
-            if (image == null)  
-                throw new CustomException(CustomError.IMAGE_ID_NOT_FOUND);
-            images.add(image);
-        }
-        for (Image image : images) {
-            imageRepository.delete(image);
-            if (!deleteImageFolder(image)) //直接记录日志：log.error
-                log.error("Cannot find target dictory with this URL: " + image.getImageUrl());
-        }
-    }
+    // @Transactional
+    // public void deleteImages(DeleteImageRequest deleteImageRequest) {
+    //     List<Image> images = new ArrayList<>(List.of());
+    //     for (Integer imageId : deleteImageRequest.getImageIds()) {
+    //         // 如果找不到不要报错
+    //         Image image = imageRepository.findById(imageId).orElse(null);
+    //         if (image == null)  
+    //             throw new CustomException(CustomError.IMAGE_ID_NOT_FOUND);
+    //         images.add(image);
+    //     }
+    //     for (Image image : images) {
+    //         imageRepository.delete(image);
+    //         if (!deleteImageFolder(image)) //直接记录日志：log.error
+    //             log.error("Cannot find target dictory with this URL: " + image.getImageUrl());
+    //     }
+    // }
 
-    public static Boolean deleteImageFolder(Image image) {
-        String projectName = image.getImageGroup().getProject().getProjectName();
-        String folderPath = String.format("./medllm_dev/projects/%d-%s/%d-%s", image.getImageGroup().getProject().getProjectId(), projectName, image.getImageId(), image.getImageName());
+    // public static Boolean deleteImageFolder(Image image) {
+    //     String projectName = image.getImageGroup().getProject().getProjectName();
+    //     String folderPath = String.format("./medllm_dev/projects/%d-%s/%d-%s", image.getImageGroup().getProject().getProjectId(), projectName, image.getImageId(), image.getImageName());
 
-        File folder = new File(folderPath);
-        return deleteDirectory(folder);
-    }
+    //     File folder = new File(folderPath);
+    //     return deleteDirectory(folder);
+    // }
 
-    public static Boolean deleteDirectory(File directory) {
-        if (directory.isDirectory()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    deleteDirectory(file);
-                }
-            }
-        }
-        return directory.delete();
-    }
+    // public static Boolean deleteDirectory(File directory) {
+    //     if (directory.isDirectory()) {
+    //         File[] files = directory.listFiles();
+    //         if (files != null) {
+    //             for (File file : files) {
+    //                 deleteDirectory(file);
+    //             }
+    //         }
+    //     }
+    //     return directory.delete();
+    // }
 
-    private String getImageName(String imageUrl) {
-        return imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-    }
+    // private String getImageName(String imageUrl) {
+    //     return imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+    // }
 }

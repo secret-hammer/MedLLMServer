@@ -8,6 +8,8 @@ import jakarta.persistence.*;
 import java.sql.Timestamp;
 import java.util.*;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,13 +35,16 @@ public class ImageGroup {
     private Timestamp updatedTime;
 
     @ManyToOne
+    @JsonIgnore
     @JoinColumn(name = "projectId", nullable = false)
     private Project project;
 
     @OneToMany(mappedBy = "imageGroup")
+    @JsonIgnore
     private List<Image> images = new ArrayList<>();
 
     @Version
+    @JsonIgnore
     private Integer version;
 
 }

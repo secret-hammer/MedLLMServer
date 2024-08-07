@@ -9,6 +9,8 @@ import jakarta.persistence.*;
 import java.sql.Timestamp;
 import java.util.*;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -37,6 +39,7 @@ public class Image {
     private Timestamp updatedTime;
 
     @ManyToOne
+    @JsonIgnore
     @JoinColumn(name = "imageGroupId", nullable = false)
     private ImageGroup imageGroup;
 
@@ -45,5 +48,6 @@ public class Image {
     private ImageType imageType;
 
     @Version
+    @JsonIgnore
     private Integer version;
 }

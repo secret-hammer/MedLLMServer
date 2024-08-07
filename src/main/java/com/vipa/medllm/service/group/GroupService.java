@@ -1,6 +1,5 @@
 package com.vipa.medllm.service.group;
 
-import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
 import com.vipa.medllm.model.Image;
 import com.vipa.medllm.repository.ImageRepository;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -103,11 +102,12 @@ public class GroupService {
 
     @Transactional
     public void deleteGroup(Integer groupId) {
-        Optional<ImageGroup> imageGroup = imageGroupRepository.findById(groupId);
-        if (imageGroup.isPresent()) {
+        Optional<ImageGroup> optionalImageGroup = imageGroupRepository.findById(groupId);
+        if (optionalImageGroup.isPresent()) {
             List<Integer> imageIds = imageRepository.findImageIdByImageGroupImageGroupId(groupId);
             DeleteImageRequest deleteImageRequest = new DeleteImageRequest(imageIds);
             imageService.deleteImages(deleteImageRequest);
+            imageGroupRepository.delete(optionalImageGroup.get());
         } else {
             throw new CustomException(CustomError.GROUP_NOT_FOUND);
         }

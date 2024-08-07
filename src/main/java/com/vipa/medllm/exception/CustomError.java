@@ -13,14 +13,17 @@ public enum CustomError {
     UNSUPPORTED_JWT_TOKEN(706, "Unsupported JWT token"),
     EMPTY_JWT_CLAIM(707, "Empty JWT claim"),
     UNAUTHORIZED_REQUEST(708, "Unauthorized request"),
-    IMAGE_ID_NOT_FOUND(709, "Image id not found"),
-    INVALID_IMAGE_URL(709, "Invalid image url"),
-    IMAGE_GROUP_ID_NOT_FOUND(710, "Image group id not found"),
 
+    PROJECT_NOT_FOUND(720, "Project not found"),
 
-    PROJECT_NOT_FOUND(710, "Project not found"),
-    GROUP_NOT_FOUND(711, "Group not found"),
-    INVALID_GROUP_DATA(712, "Invalid group data"),
+    IMAGE_ID_NOT_FOUND(730, "Image id not found"),
+    INVALID_IMAGE_URL(731, "Invalid image url"),
+
+    IMAGE_GROUP_ID_NOT_FOUND(740, "Image group id not found"),
+    GROUP_NOT_FOUND(741, "Group not found"),
+    INVALID_GROUP_DATA(742, "Invalid group data"),
+
+    IMAGETYPE_NOT_FOUND(750, "Image type not found"),
 
     ARGUMENT_NOT_VALID(801, "Argument not valid"),
     INTERNAL_SERVER_ERROR(800, "Internal server error");

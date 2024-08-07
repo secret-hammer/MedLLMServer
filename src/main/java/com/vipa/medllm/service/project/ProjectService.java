@@ -1,7 +1,8 @@
 package com.vipa.medllm.service.project;
 
-import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
-import com.vipa.medllm.service.image.ImageService;
+import com.vipa.medllm.util.DirectoryUtil;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.retry.annotation.Backoff;
@@ -15,30 +16,42 @@ import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest.GroupDetail;
 import com.vipa.medllm.dto.request.project.CreateProjectInfo;
 import com.vipa.medllm.dto.request.project.UpdateProjectInfo;
+import com.vipa.medllm.exception.CustomError;
+import com.vipa.medllm.exception.CustomException;
+import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.ImageType;
 import com.vipa.medllm.model.Project;
 import com.vipa.medllm.model.User;
+import com.vipa.medllm.repository.ImageGroupRepository;
 import com.vipa.medllm.repository.ImageTypeRepository;
 import com.vipa.medllm.repository.ProjectRepository;
 import com.vipa.medllm.repository.UserRepository;
 import com.vipa.medllm.service.group.GroupService;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import java.nio.file.Paths;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@AllArgsConstructor
+@Slf4j
+@RequiredArgsConstructor
 public class ProjectService {
 
-    private GroupService groupService;
+    private final GroupService groupService;
 
-    private ProjectRepository projectRepository;
-    private UserRepository userRepository;
-    private ImageTypeRepository imageTypeRepository;
-   
-    private final ImageService imageService;
+    private final ProjectRepository projectRepository;
+    private final ImageGroupRepository imageGroupRepository;
+    private final UserRepository userRepository;
+    private final ImageTypeRepository imageTypeRepository;
+
+    @Value("${medllm.projects.resource.path}")
+    private String projectResourcePath;
 
     @Transactional
     public void createProjects(List<CreateProjectInfo> projectInfoList) {
@@ -54,11 +67,27 @@ public class ProjectService {
             project.setDescription(createProjectInfo.getProjectDescription());
 
             ImageType imageType = imageTypeRepository.findByImageTypeId(createProjectInfo.getImageTypeId())
-                    .orElseThrow(() -> new RuntimeException(
-                            String.format("ImageType with id %d not found", createProjectInfo.getImageTypeId())));
+                    .orElseThrow(() -> new CustomException(CustomError.IMAGETYPE_NOT_FOUND));
 
             project.setImageType(imageType);
             projectRepository.save(project);
+
+            // 在静态资源服务器上创建数据集文件夹
+            String folderPath = String.format(projectResourcePath + "/projects/%d", project.getProjectId());
+
+            Path dir = Paths.get(folderPath);
+            if (Files.exists(dir)) {
+                log.error(
+                        "com.vipa.medllm.service.project.createProjects: Project folder already exists: " + folderPath);
+            } else {
+                try {
+                    DirectoryUtil.createDirectory(dir);
+                } catch (IOException e) {
+                    log.error(
+                            "com.vipa.medllm.service.project.createProjects: Error creating project folder: "
+                                    + folderPath);
+                }
+            }
 
             // 同时创建一个默认的分组
             CreateGroupRequest createGroupRequest = new CreateGroupRequest();
@@ -72,14 +101,13 @@ public class ProjectService {
     }
 
     @Transactional
-    @Retryable(retryFor = { 
+    @Retryable(retryFor = {
             OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void updateProjects(List<UpdateProjectInfo> projectInfoList) {
         // 批量更新数据集,按事务处理
         for (UpdateProjectInfo updateProjectInfo : projectInfoList) {
             Project project = projectRepository.findByProjectId(updateProjectInfo.getProjectId())
-                    .orElseThrow(() -> new RuntimeException(
-                            String.format("Project with id %d not found", updateProjectInfo.getProjectId())));
+                    .orElseThrow(() -> new CustomException(CustomError.PROJECT_NOT_FOUND));
 
             project.setProjectName(updateProjectInfo.getNewProjectName());
             project.setDescription(updateProjectInfo.getNewProjectDescription());
@@ -109,34 +137,20 @@ public class ProjectService {
         return projectRepository.findAll(spec);
     }
 
-    // // deleteProject: 删除单个project
-    // @Transactional
-    // public void deleteProject(Integer projectId) {
-    //     Project project = projectRepository.findById(projectId)
-    //             .orElseThrow(() -> new RuntimeException("Project not found"));
+    @Transactional
+    public void deleteProject(Integer projectId) {
+        Optional<Project> optionalProject = projectRepository.findById(projectId);
 
-    //     List<ImageGroup> imageGroups = imageGroupRepository.findAllByProjectProjectId(projectId);
-    //     for (ImageGroup imageGroup : imageGroups) {
-    //         DeleteGroupRequest deleteGroupRequest = new DeleteGroupRequest();
-    //         deleteGroupRequest.setGroupId(imageGroup.getImageGroupId());
-
-    //         deleteGroup(deleteGroupRequest);
-    //     }
-
-    //     projectRepository.delete(project);
-    // }
-
-    // public void deleteGroup(DeleteGroupRequest deleteGroupRequest) {
-    //     ImageGroup imageGroup = imageGroupRepository.findById(deleteGroupRequest.getGroupId())
-    //             .orElseThrow(() -> new RuntimeException("Image group not found"));
-
-    //     List<Image> images = imageRepository.findByImageGroupImageGroupId(deleteGroupRequest.getGroupId());
-    //     for (Image image : images) {
-    //         ImageService.deleteImageFolder(image);
-    //         imageRepository.delete(image);
-    //     }
-
-    //     imageGroupRepository.delete(imageGroup);
-    // }
+        if (optionalProject.isPresent()) {
+            List<ImageGroup> imageGroups = imageGroupRepository.findAllByProjectProjectId(projectId);
+            // 删除所有的组
+            for (ImageGroup imageGroup : imageGroups) {
+                groupService.deleteGroup(imageGroup.getImageGroupId());
+            }
+            projectRepository.delete(optionalProject.get());
+        } else {
+            throw new CustomException(CustomError.PROJECT_NOT_FOUND);
+        }
+    }
 
 }

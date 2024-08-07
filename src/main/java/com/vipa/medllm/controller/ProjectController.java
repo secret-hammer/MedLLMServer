@@ -1,7 +1,5 @@
 package com.vipa.medllm.controller;
 
-import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
-import com.vipa.medllm.dto.request.group.DeleteProjectRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -12,6 +10,7 @@ import com.vipa.medllm.model.Project;
 import com.vipa.medllm.service.project.ProjectService;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
@@ -64,19 +63,14 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
-    // @PostMapping("/delete")
-    // public ResponseEntity<ResponseResult<List<String>>> deleteGroups(@RequestBody DeleteProjectRequest deleteProjectRequest) {
+    @PostMapping("/delete")
+    public ResponseEntity<ResponseResult<Object>> deleteProject(
+            @Valid @NotNull @RequestBody Integer projectId) {
 
-    //     projectService.deleteProject(deleteProjectRequest.getProjectId());
-    //     ResponseResult<List<String>> response = new ResponseResult<>(200, "Group delete process completed");
+        projectService.deleteProject(projectId);
+        ResponseResult<Object> response = new ResponseResult<>(200, "Group delete process completed");
 
-    //     return ResponseEntity.ok(response);
-    // }
+        return ResponseEntity.ok(response);
+    }
 
-    // @PostMapping("/delete")
-    // public ResponseEntity<ResponseResult<Object>> deleteProjects(@RequestParam
-    // List<Integer> projectIds) {
-    // // 待开发
-
-    // }
 }

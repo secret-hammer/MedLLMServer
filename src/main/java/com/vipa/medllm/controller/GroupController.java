@@ -1,7 +1,6 @@
 package com.vipa.medllm.controller;
 
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
-import com.vipa.medllm.dto.request.group.DeleteGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.response.ResponseResult;
 import com.vipa.medllm.model.ImageGroup;

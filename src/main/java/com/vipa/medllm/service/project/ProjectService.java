@@ -62,7 +62,7 @@ public class ProjectService {
 
             // 同时创建一个默认的分组
             CreateGroupRequest createGroupRequest = new CreateGroupRequest();
-            createGroupRequest.setProjectId(project.getProjectId());`
+            createGroupRequest.setProjectId(project.getProjectId());
             GroupDetail defaultGroup = new GroupDetail();
             defaultGroup.setName("默认组");
             defaultGroup.setDescription("默认组");

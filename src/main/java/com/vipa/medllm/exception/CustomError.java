@@ -13,7 +13,7 @@ public enum CustomError {
     UNSUPPORTED_JWT_TOKEN(706, "Unsupported JWT token"),
     EMPTY_JWT_CLAIM(707, "Empty JWT claim"),
     UNAUTHORIZED_REQUEST(708, "Unauthorized request"),
-    IMAGE_NOT_FOUND(709, "Image id not found"),
+    IMAGE_ID_NOT_FOUND(709, "Image id not found"),
     INVALID_IMAGE_URL(709, "Invalid image url"),
     IMAGE_GROUP_ID_NOT_FOUND(710, "Image group id not found"),
 

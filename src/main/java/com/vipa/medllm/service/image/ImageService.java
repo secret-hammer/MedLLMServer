@@ -77,7 +77,7 @@ public class ImageService {
         for (Integer imageId : deleteImageRequest.getImageIds()) {
             // 如果找不到不要报错
             Image image = imageRepository.findById(imageId).orElse(null);
-            if (image == null)  //CustomError.IMAGE_ID_NOT_FOUND
+            if (image == null)  
                 throw new CustomException(CustomError.IMAGE_ID_NOT_FOUND);
             images.add(image);
         }

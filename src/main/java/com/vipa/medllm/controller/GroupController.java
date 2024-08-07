@@ -55,7 +55,7 @@ public class GroupController {
 
     @PostMapping("/delete")
     public ResponseEntity<ResponseResult<Object>> deleteGroups(
-            @Valid @NotNull @RequestBody Integer groupId) {
+            @RequestParam(required = true) Integer groupId) {
 
         groupService.deleteGroup(groupId);
         ResponseResult<Object> response = new ResponseResult<>(200, "Group delete process completed");

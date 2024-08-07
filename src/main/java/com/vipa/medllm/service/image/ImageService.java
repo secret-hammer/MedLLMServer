@@ -100,7 +100,7 @@ public class ImageService {
         Specification<Image> spec = Specification.where(null);
 
         if(searchImageRequest.getImageGroupId() != null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageGroupId"), searchImageRequest.getImageGroupId()));
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageGroup").get("imageGroupId"), searchImageRequest.getImageGroupId()));
         }
 
         if(searchImageRequest.getImageId() != null){
@@ -108,11 +108,11 @@ public class ImageService {
         }
 
         if(searchImageRequest.getImageTypeId()!=null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageTypeId"), searchImageRequest.getImageTypeId()));
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageType").get("imageTypeId"), searchImageRequest.getImageTypeId()));
         }
 
         if(searchImageRequest.getImageName()!=null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageName"), "%" + searchImageRequest.getImageTypeId() + "%"));
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageName"), "%" + searchImageRequest.getImageName() + "%"));
         }
 
         if(searchImageRequest.getImageUrl() != null){

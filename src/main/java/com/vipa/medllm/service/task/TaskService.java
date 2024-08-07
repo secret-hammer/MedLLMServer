@@ -7,16 +7,20 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.vipa.medllm.config.redisconfig.RedisCache;
 import com.vipa.medllm.controller.TaskContoller;
 import com.vipa.medllm.dto.middto.task.TaskProcessDto;
-import com.vipa.medllm.model.LLMTaskType;
-import com.vipa.medllm.model.Project;
-import com.vipa.medllm.model.QAPair;
-import com.vipa.medllm.model.Session;
+import com.vipa.medllm.dto.request.task.LiveQARequest;
+import com.vipa.medllm.dto.request.task.LiveQAToComputationRequest;
+import com.vipa.medllm.dto.request.task.SearchLLMTaskTypeRequest;
+import com.vipa.medllm.dto.response.task.LiveQAResponse;
+import com.vipa.medllm.exception.CustomError;
+import com.vipa.medllm.exception.CustomException;
+import com.vipa.medllm.model.*;
+import com.vipa.medllm.repository.ImageRepository;
 import com.vipa.medllm.repository.LLMTaskTypeRepository;
 import com.vipa.medllm.repository.QAPairRepository;
 import com.vipa.medllm.repository.SessionRepository;
@@ -31,6 +35,7 @@ import io.jsonwebtoken.io.SerializationException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
@@ -47,6 +52,7 @@ public class TaskService {
 
     private QAPairService qaPairService;
 
+    private ImageRepository imageRepository;
     private QAPairRepository qaPairRepository;
     private SessionRepository sessionRepository;
     private LLMTaskTypeRepository llmTaskTypeRepository;
@@ -58,6 +64,9 @@ public class TaskService {
 
     @Value("${spring.application.name}")
     private String applicationName;
+
+    @Value("${computation.server.url}")
+    private String computationServerUrl;
 
     public Integer submitPathologyImageConvertTask(
             @Valid CreatePathologyImageConvertTaskDto createPathologyImageConvertTaskDto)
@@ -104,7 +113,10 @@ public class TaskService {
         String taskId = imageConvertTaskCallbackDto.getTaskId();
         TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheObject(taskId);
 
-        // 任务还没有执行完毕，正常不会出现这种情况
+        // 主动推送任务进度
+        taskController.sendTaskProgress(taskId, taskProcessDto);
+
+        // 任务还没有执行完毕，不做其他处理
         if (taskProcessDto.getStatus() == 0 || taskProcessDto.getStatus() == 1) {
             return;
         }
@@ -115,8 +127,6 @@ public class TaskService {
             return;
         }
 
-        // 主动推送任务进度
-        taskController.sendTaskProgress(taskId, taskProcessDto);
         // 删除任务进度缓存（任务失败仍会保留在里面，等待人工处理）
         redisCache.delCacheMapValue(TASK_PROGRESS_CACHE_KEY, taskId);
 
@@ -135,7 +145,10 @@ public class TaskService {
         String taskId = llmInferenceTaskCallbackDto.getTaskId();
         TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheObject(taskId);
 
-        // 任务还没有执行完毕，正常不会出现这种情况
+        // 主动推送任务进度
+        taskController.sendTaskProgress(taskId, taskProcessDto);
+
+        // 任务还没有执行完毕，不做其他处理
         if (taskProcessDto.getStatus() == 0 || taskProcessDto.getStatus() == 1) {
             return;
         }
@@ -145,8 +158,7 @@ public class TaskService {
                     taskId, taskProcessDto.getMessage());
             return;
         }
-        // 主动推送任务进度
-        taskController.sendTaskProgress(taskId, taskProcessDto);
+
         // 删除任务进度缓存（任务失败仍会保留在里面，等待人工处理）
         redisCache.delCacheMapValue(TASK_PROGRESS_CACHE_KEY, taskId);
 
@@ -206,8 +218,7 @@ public class TaskService {
         }
     }
 
-    // 每5秒检查一次任务进度
-    @Scheduled(fixedRate = 5000)
+    // 检查并推送任务进度
     public void checkTaskProgress() {
         Map<String, TaskProcessDto> taskProgressMap = redisCache.getCacheMap(TASK_PROGRESS_CACHE_KEY);
         for (Map.Entry<String, TaskProcessDto> entry : taskProgressMap.entrySet()) {
@@ -217,8 +228,13 @@ public class TaskService {
         }
     }
 
-    public List<LLMTaskType> searchLLMTaskType(Integer llmTaskTypeId, Boolean isPreProcessTask, String llmTaskTypeName,
-            String prompt, String description) {
+    public List<LLMTaskType> searchLLMTaskType(SearchLLMTaskTypeRequest searchLLMTaskTypeRequest) {
+        Integer llmTaskTypeId = searchLLMTaskTypeRequest.getLlmTaskTypeId();
+        Boolean isPreProcessTask = searchLLMTaskTypeRequest.getIsPreProcessTask();
+        String llmTaskTypeName = searchLLMTaskTypeRequest.getLlmTaskTypeName();
+        String prompt = searchLLMTaskTypeRequest.getPrompt();
+        String description = searchLLMTaskTypeRequest.getDescription();
+
         Specification<LLMTaskType> spec = Specification.where(null);
         if (llmTaskTypeId != null) {
             spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("llmTaskTypeId"),
@@ -242,4 +258,52 @@ public class TaskService {
         }
         return llmTaskTypeRepository.findAll(spec);
     }
+
+    public String liveQA(@Valid LiveQARequest liveQaRequest) {
+        // 查询图片
+        Image image = imageRepository.findById(liveQaRequest.getImageId())
+                .orElseThrow(() -> new CustomException(CustomError.IMAGE_ID_NOT_FOUND));
+
+        // 查询session
+        Session session = sessionRepository.findByImageId(liveQaRequest.getImageId());
+
+        QAPair qaPair = null;
+        // 实时问答任务
+        if (liveQaRequest.getLlmTaskTypeId() == 1) {
+            qaPair = qaPairService.createQAPair(new CreateQAPairDto(session, liveQaRequest.getLlmTaskTypeId(),
+                    liveQaRequest.getQuestion(), new Timestamp(System.currentTimeMillis())));
+
+            // 向计算服务发起实时问答请求
+            LiveQAToComputationRequest liveQAToComputationRequest = new LiveQAToComputationRequest(
+                    liveQaRequest.getQuestion(),
+                    image.getImageUrl(),
+                    liveQaRequest.getX(),
+                    liveQaRequest.getY(),
+                    liveQaRequest.getWidth(),
+                    liveQaRequest.getHeight());
+
+            WebClient webClient = WebClient.create();
+            Mono<LiveQAResponse> response = webClient.post()
+                    .uri(computationServerUrl + "/chat")
+                    .header("Content-Type", "application/json")
+                    .body(Mono.just(liveQAToComputationRequest), LiveQAToComputationRequest.class)
+                    .retrieve()
+                    .bodyToMono(LiveQAResponse.class);
+
+            LiveQAResponse liveQAResponse = response.block();
+
+            // 这里后面可能要根据模型的回复做一些处理，比如解析xml为前端可用的数据等操作，暂时不用
+            qaPair.setAnswer(liveQAResponse.getGpt());
+            qaPair.setAnswerTime(new Timestamp(System.currentTimeMillis()));
+            qaPairRepository.save(qaPair);
+        } else {
+            // 预处理任务
+            qaPair = qaPairService.findQAPair(null, session.getSessionId(), liveQaRequest.getLlmTaskTypeId());
+        }
+
+        session.getQaPairHistoryList().add(qaPair);
+        sessionRepository.save(session);
+        return qaPair.getAnswer();
+    }
+
 }

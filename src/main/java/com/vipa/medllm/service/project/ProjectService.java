@@ -147,6 +147,25 @@ public class ProjectService {
             for (ImageGroup imageGroup : imageGroups) {
                 groupService.deleteGroup(imageGroup.getImageGroupId());
             }
+
+            // 在静态资源服务器上删除数据集文件夹
+            String folderPath = String.format(projectResourcePath + "/projects/%d",
+                    optionalProject.get().getProjectId());
+
+            Path dir = Paths.get(folderPath);
+            if (!Files.exists(dir)) {
+                log.error(
+                        "com.vipa.medllm.service.project.deleteProject: Project folder not exists: " + folderPath);
+            } else {
+                try {
+                    DirectoryUtil.deleteDirectory(dir);
+                } catch (IOException e) {
+                    log.error(
+                            "com.vipa.medllm.service.project.deleteProject: Error deleting project folder: "
+                                    + folderPath);
+                }
+            }
+
             projectRepository.delete(optionalProject.get());
         } else {
             throw new CustomException(CustomError.PROJECT_NOT_FOUND);

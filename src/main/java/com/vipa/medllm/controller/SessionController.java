@@ -23,7 +23,8 @@ public class SessionController {
     private SessionService sessionService;
 
     @GetMapping("/search")
-    public ResponseEntity<ResponseResult<List<Session>>> searchSessions(@RequestParam(required = false) String sessionId,
+    public ResponseEntity<ResponseResult<List<Session>>> searchSessions(
+            @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) Integer imageId) {
         List<Session> sessions = sessionService.searchSessions(sessionId, imageId);
 

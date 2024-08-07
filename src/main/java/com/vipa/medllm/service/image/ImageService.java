@@ -108,7 +108,7 @@ public class ImageService {
     //     return directory.delete();
     // }
 
-    // private String getImageName(String imageUrl) {
-    //     return imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
-    // }
+    private String getImageName(String imageUrl) {
+        return imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+    }
 }

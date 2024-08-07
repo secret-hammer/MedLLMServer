@@ -125,22 +125,22 @@ public class GroupService {
         return new ResponseGetGroups(new ArrayList<>(sortedGroups));
     }
 
-    @Transactional
-    public void deleteGroup(DeleteGroupRequest deleteGroupRequest) {
-        ImageGroup imageGroup = imageGroupRepository.findById(deleteGroupRequest.getGroupId()).orElse(null);
-        if (imageGroup == null) {
-            throw new CustomException(CustomError.IMAGE_GROUP_ID_NOT_FOUND);
-        }
+    // @Transactional
+    // public void deleteGroup(DeleteGroupRequest deleteGroupRequest) {
+    //     ImageGroup imageGroup = imageGroupRepository.findById(deleteGroupRequest.getGroupId()).orElse(null);
+    //     if (imageGroup == null) {
+    //         throw new CustomException(CustomError.IMAGE_GROUP_ID_NOT_FOUND);
+    //     }
 
-        List<Image> images = imageRepository.findByImageGroupImageGroupId(deleteGroupRequest.getGroupId());
-        for (Image image : images) {
-            ImageService.deleteImageFolder(image);
-            imageRepository.delete(image);
-        }
+    //     List<Image> images = imageRepository.findByImageGroupImageGroupId(deleteGroupRequest.getGroupId());
+    //     for (Image image : images) {
+    //         ImageService.deleteImageFolder(image);
+    //         imageRepository.delete(image);
+    //     }
 
-        imageGroupRepository.delete(imageGroup);
+    //     imageGroupRepository.delete(imageGroup);
 
-    }
+    // }
 
 
     @Transactional

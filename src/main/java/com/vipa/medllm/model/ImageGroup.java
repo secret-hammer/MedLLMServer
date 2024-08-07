@@ -16,7 +16,7 @@ import java.util.*;
 public class ImageGroup {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int imageGroupId;
+    private Integer imageGroupId;
 
     @Column(nullable = false, length = 50)
     private String imageGroupName;

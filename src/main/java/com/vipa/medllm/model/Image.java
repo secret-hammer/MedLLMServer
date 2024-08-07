@@ -17,7 +17,7 @@ import java.util.*;
 public class Image {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int imageId;
+    private Integer imageId;
 
     @Column(nullable = false, unique = true, length = 255)
     private String imageUrl;
@@ -26,7 +26,7 @@ public class Image {
     private String imageName;
 
     @Column(nullable = false)
-    private int status = 0;
+    private Integer status = 0;
 
     @Column(nullable = false, updatable = false)
     @org.hibernate.annotations.CreationTimestamp

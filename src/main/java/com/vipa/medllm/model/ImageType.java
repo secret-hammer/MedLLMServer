@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Table(name = "ImageType")
 public class ImageType {
     @Id
-    private int imageTypeId;
+    private Integer imageTypeId;
 
     @Column(nullable = false, length = 50)
     private String imageTypeName;

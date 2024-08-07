@@ -11,7 +11,4 @@ import org.springframework.data.jpa.repository.Query;
 public interface ImageTypeRepository extends JpaRepository<ImageType, Integer> {
 
     Optional<ImageType> findByImageTypeId(long imageTypeId);
-
-//    @Query("SELECT i.imageExtensions FROM ImageType i")
-//    List<String> findAllExtensions();
 }

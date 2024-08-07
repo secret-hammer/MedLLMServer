@@ -7,5 +7,7 @@ import java.util.List;
 
 public interface ImageRepository extends JpaRepository<Image, Integer> {
     // Additional custom queries can be defined here
-    List<Image> findByImageGroupImageGroupId(int imageGroupId);
+    List<Image> findByImageGroupImageGroupId(Integer imageGroupId);
+
+    List<Integer> findImageIdByImageGroupImageGroupId(Integer groupId);
 }

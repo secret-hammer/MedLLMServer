@@ -8,6 +8,7 @@ import com.vipa.medllm.dto.request.image.UploadImageRequest;
 import com.vipa.medllm.dto.response.ResponseResult;
 import com.vipa.medllm.service.image.ImageService;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public class ImageController {
     private final ImageService imageService;
 
     @PostMapping("/upload")
-    public ResponseEntity<ResponseResult<List<String>>> uploadImages(@RequestBody UploadImageRequest uploadImageRequest) {
+    public ResponseEntity<ResponseResult<List<String>>> uploadImages(@Valid @RequestBody UploadImageRequest uploadImageRequest) {
 
         List<String> results = imageService.uploadImages(uploadImageRequest);
         ResponseResult<List<String>> response = new ResponseResult<>(200, "Image upload process completed", results);
@@ -28,7 +29,7 @@ public class ImageController {
     }
 
     @PostMapping("/delete")
-    public ResponseEntity<ResponseResult<List<String>>> deleteImages(@RequestBody DeleteImageRequest deleteImageRequest) {
+    public ResponseEntity<ResponseResult<List<String>>> deleteImages(@Valid @RequestBody DeleteImageRequest deleteImageRequest) {
 
         imageService.deleteImages(deleteImageRequest);
         ResponseResult<List<String>> response = new ResponseResult<>(200, "Image delete process completed");

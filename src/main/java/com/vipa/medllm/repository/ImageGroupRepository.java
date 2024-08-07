@@ -7,14 +7,9 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.List;
 import java.util.Optional;
 
-
-//public interface ImageGroupRepository extends JpaRepository<ImageGroup, Integer>, JpaSpecificationExecutor<ImageGroup> {
-//    @Query("SELECT ig FROM ImageGroup ig LEFT JOIN FETCH ig.project WHERE ig.project.projectId = ?1")
-//    List<ImageGroup> findAllByProjectId(String projectId);
-//}
 public interface ImageGroupRepository extends JpaRepository<ImageGroup, Integer>, JpaSpecificationExecutor<ImageGroup> {
-//    boolean existsByImageGroupId(int ImageGroupId);
-    Optional<ImageGroup> findAllByImageGroupId(int imageGroupId);
-    List<ImageGroup> findAllByProjectProjectId(int projectId);
+    Optional<ImageGroup> findAllByImageGroupId(Integer imageGroupId);
+
+    List<ImageGroup> findAllByProjectProjectId(Integer projectId);
 
 }

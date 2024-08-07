@@ -10,7 +10,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
-import com.vipa.medllm.dto.response.group.ResponseGetGroups;
+import com.vipa.medllm.dto.request.image.DeleteImageRequest;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.Project;
 import com.vipa.medllm.repository.ImageGroupRepository;
@@ -19,76 +19,53 @@ import com.vipa.medllm.repository.ProjectRepository;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
 import com.vipa.medllm.service.image.ImageService;
-import org.springframework.transaction.annotation.Transactional;
 
+import lombok.AllArgsConstructor;
+
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
 import java.util.*;
 
 @Service
+@AllArgsConstructor
 public class GroupService {
 
-    private final ImageGroupRepository imageGroupRepository;
-    private final ProjectRepository projectRepository;
-    private final ImageRepository imageRepository;
+    private final ImageService imageService;
 
-    public GroupService(ImageGroupRepository imageGroupRepository, ProjectRepository projectRepository, ImageRepository imageRepository) {
-        this.imageGroupRepository = imageGroupRepository;
-        this.projectRepository = projectRepository;
-        this.imageRepository = imageRepository;
-    }
+    private final ImageGroupRepository imageGroupRepository;
+    private final ImageRepository imageRepository;
+    private final ProjectRepository projectRepository;
 
     @Transactional
-    public ResponseGetGroups searchGroup(Integer projectId, Integer groupId, String groupName, String groupDescription) {
-        // 第一步：如果groupId不为空，则直接搜索
-        if (groupId != null) { //如果groupId不传的话，groupId为空的话
-            ImageGroup group = imageGroupRepository.findById(groupId).orElse(null);
-            if (group != null && (groupName == null || group.getImageGroupName().contains(groupName))
-                    && (groupDescription == null || group.getDescription().contains(groupDescription))
-                    && (projectId == null || group.getProject().getProjectId() == projectId)) {
-                return new ResponseGetGroups(List.of(new ResponseGetGroups.GroupDTO(
-                        group.getImageGroupId(),
-                        group.getImageGroupName(),
-                        group.getDescription(),
-                        group.getProject().getProjectId()
-                )));
-            } else {
-                return new ResponseGetGroups(new ArrayList<>());
-            }
+    public List<ImageGroup> searchGroup(Integer projectId, Integer groupId, String groupName,
+            String groupDescription) {
+
+        Specification<ImageGroup> spec = Specification.where(null);
+        if (groupId != null) {
+            spec = spec
+                    .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageGroupId"), groupId));
+        }
+        if (projectId != null) {
+            spec = spec
+                    .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("project").get("projectId"),
+                            projectId));
+        }
+        if (groupName != null && !groupName.isEmpty()) {
+            spec = spec
+                    .and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageGroupName"),
+                            "%" + groupName + "%"));
+        }
+        if (groupDescription != null && !groupDescription.isEmpty()) {
+            spec = spec
+                    .and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("description"),
+                            "%" + groupDescription + "%"));
         }
 
-        // 第二步：根据projectId和其他条件搜索
-        Specification<ImageGroup> spec = (root, query, criteriaBuilder) -> {
-            Specification<ImageGroup> criteria = Specification.where(null);
-
-            if (projectId != null) {
-                criteria = criteria.and((root1, query1, cb) ->
-                        cb.equal(root1.get("project").get("projectId"), projectId));
-            }
-            if (groupName != null && !groupName.isEmpty()) {
-                criteria = criteria.and((root1, query1, cb) ->
-                        cb.like(root1.get("imageGroupName"), "%" + groupName + "%"));
-            }
-            if (groupDescription != null && !groupDescription.isEmpty()) {
-                criteria = criteria.and((root1, query1, cb) ->
-                        cb.like(root1.get("description"), "%" + groupDescription + "%"));
-            }
-
-            return criteria.toPredicate(root, query, criteriaBuilder);
-        };
-
-        List<ImageGroup> selectedGroups = imageGroupRepository.findAll(spec, Sort.by("imageGroupId")).stream().distinct().toList();
-
-        // 使用 LinkedHashSet 来存储唯一的 GroupDTO 对象，确保有序性
+        List<ImageGroup> selectedGroups = imageGroupRepository.findAll(spec, Sort.by("imageGroupId"));
 
         // 对 selectedGroups 进行排序，将精确匹配的放前面，模糊匹配的放后面
-        List<ResponseGetGroups.GroupDTO> sortedGroups = selectedGroups.stream()
-                .map(group -> new ResponseGetGroups.GroupDTO(
-                        group.getImageGroupId(),
-                        group.getImageGroupName(),
-                        group.getDescription(),
-                        group.getProject().getProjectId()
-                ))
+        List<ImageGroup> sortedGroups = selectedGroups.stream()
                 .sorted((g1, g2) -> {
                     int g1Match = 0, g2Match = 0;
 
@@ -118,30 +95,23 @@ public class GroupService {
                         }
                     }
 
-                    return Integer.compare(g2Match, g1Match);  // 按匹配程度降序排列
-                })
-                .toList();
+                    return Integer.compare(g2Match, g1Match); // 按匹配程度降序排列
+                }).toList();
 
-        return new ResponseGetGroups(new ArrayList<>(sortedGroups));
+        return sortedGroups;
     }
 
-    // @Transactional
-    // public void deleteGroup(DeleteGroupRequest deleteGroupRequest) {
-    //     ImageGroup imageGroup = imageGroupRepository.findById(deleteGroupRequest.getGroupId()).orElse(null);
-    //     if (imageGroup == null) {
-    //         throw new CustomException(CustomError.IMAGE_GROUP_ID_NOT_FOUND);
-    //     }
-
-    //     List<Image> images = imageRepository.findByImageGroupImageGroupId(deleteGroupRequest.getGroupId());
-    //     for (Image image : images) {
-    //         ImageService.deleteImageFolder(image);
-    //         imageRepository.delete(image);
-    //     }
-
-    //     imageGroupRepository.delete(imageGroup);
-
-    // }
-
+    @Transactional
+    public void deleteGroup(Integer groupId) {
+        Optional<ImageGroup> imageGroup = imageGroupRepository.findById(groupId);
+        if (imageGroup.isPresent()) {
+            List<Integer> imageIds = imageRepository.findImageIdByImageGroupImageGroupId(groupId);
+            DeleteImageRequest deleteImageRequest = new DeleteImageRequest(imageIds);
+            imageService.deleteImages(deleteImageRequest);
+        } else {
+            throw new CustomException(CustomError.GROUP_NOT_FOUND);
+        }
+    }
 
     @Transactional
     public void createGroup(CreateGroupRequest createGroupRequest) {
@@ -153,7 +123,8 @@ public class GroupService {
         for (CreateGroupRequest.GroupDetail targetGroup : targetGroups) {
             ImageGroup imageGroup = new ImageGroup();
             imageGroup.setImageGroupName(targetGroup.getName());
-            if (targetGroup.getDescription() != null) imageGroup.setDescription(targetGroup.getDescription());
+            if (targetGroup.getDescription() != null)
+                imageGroup.setDescription(targetGroup.getDescription());
             imageGroup.setProject(project);
 
             imageGroupRepository.save(imageGroup);
@@ -161,7 +132,8 @@ public class GroupService {
     }
 
     @Transactional
-    @Retryable(retryFor = {SQLException.class, OptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 100))
+    @Retryable(retryFor = { SQLException.class,
+            OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void updateGroup(UpdateGroupRequest updateGroupRequest) {
         updateGroupRequest.getTargetGroups().forEach(groupDetail -> {
             Optional<ImageGroup> optionalGroup = imageGroupRepository.findAllByImageGroupId(groupDetail.getGroupId());
@@ -172,7 +144,8 @@ public class GroupService {
 
                 if (currentProject.getProjectId() != newProjectId) {
                     Project newProject = projectRepository.findById(newProjectId)
-                            .orElseThrow(() -> new RuntimeException("ProjectId " + groupDetail.getProjectId() + " not found"));
+                            .orElseThrow(() -> new RuntimeException(
+                                    "ProjectId " + groupDetail.getProjectId() + " not found"));
                     group.setProject(newProject);
                 }
 
@@ -180,7 +153,7 @@ public class GroupService {
                 group.setDescription(groupDetail.getDescription());
                 imageGroupRepository.save(group);
             } else {
-                throw new RuntimeException("Group not found with id: " + groupDetail.getGroupId());
+                throw new CustomException(CustomError.GROUP_NOT_FOUND);
             }
         });
     }

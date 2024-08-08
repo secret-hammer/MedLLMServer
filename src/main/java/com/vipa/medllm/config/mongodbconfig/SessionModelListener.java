@@ -1,6 +1,5 @@
 package com.vipa.medllm.config.mongodbconfig;
 
-import java.util.Date;
 import java.sql.Timestamp;
 
 import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener;
@@ -16,7 +15,7 @@ public class SessionModelListener extends AbstractMongoEventListener<Session> {
     @Override
     public void onBeforeConvert(BeforeConvertEvent<Session> event) {
         Session session = event.getSource();
-        Timestamp currentTimestamp = new Timestamp(new Date().getTime());
+        Timestamp currentTimestamp = new Timestamp(System.currentTimeMillis());
 
         if (session.getCreatedTime() == null) {
             session.setCreatedTime(currentTimestamp);

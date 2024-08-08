@@ -19,7 +19,7 @@ import jakarta.validation.constraints.NotNull;
 @Document(collection = "sessions")
 public class Session {
     @Id
-    private ObjectId sessionId;
+    private ObjectId sessionId = new ObjectId();
 
     @NotNull(message = "Image Id is required")
     private Integer imageId;
@@ -51,5 +51,11 @@ public class Session {
 
     public String getSessionId() {
         return sessionId.toHexString();
+    }
+
+    public Session(Integer userId, Integer imageId, Integer status) {
+        this.userId = userId;
+        this.imageId = imageId;
+        this.status = status;
     }
 }

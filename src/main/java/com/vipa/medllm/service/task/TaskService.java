@@ -7,6 +7,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -44,23 +45,24 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class TaskService {
+    private final RabbitTemplate rabbitTemplate;
 
-    private TaskContoller taskController;
-    private RabbitTemplate rabbitTemplate;
+    private final RedisCache redisCache;
 
-    private RedisCache redisCache;
+    private final QAPairService qaPairService;
 
-    private QAPairService qaPairService;
+    private final ImageRepository imageRepository;
+    private final QAPairRepository qaPairRepository;
+    private final SessionRepository sessionRepository;
+    private final LLMTaskTypeRepository llmTaskTypeRepository;
 
-    private ImageRepository imageRepository;
-    private QAPairRepository qaPairRepository;
-    private SessionRepository sessionRepository;
-    private LLMTaskTypeRepository llmTaskTypeRepository;
+    private SimpMessagingTemplate messagingTemplate;
 
     private static final String TASK_PROGRESS_CACHE_KEY = "task_progress";
     private static final String TASK_EXCHANGE = "task_exchange";
     private static final String PATHOLOGY_IMAGE_CONVERT_ROUTINGKEY = "pathology_image_convert";
     private static final String PATHOLOGY_LLM_INFERENCE_ROUTINGKEY = "pathology_llm_inference";
+    private static final String TASK_PROGRESS_TOPIC = "/topic/task_progress/";
 
     @Value("${spring.application.name}")
     private String applicationName;
@@ -114,7 +116,7 @@ public class TaskService {
         TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheObject(taskId);
 
         // 主动推送任务进度
-        taskController.sendTaskProgress(taskId, taskProcessDto);
+        sendTaskProgress(taskId, taskProcessDto);
 
         // 任务还没有执行完毕，不做其他处理
         if (taskProcessDto.getStatus() == 0 || taskProcessDto.getStatus() == 1) {
@@ -146,7 +148,7 @@ public class TaskService {
         TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheObject(taskId);
 
         // 主动推送任务进度
-        taskController.sendTaskProgress(taskId, taskProcessDto);
+        sendTaskProgress(taskId, taskProcessDto);
 
         // 任务还没有执行完毕，不做其他处理
         if (taskProcessDto.getStatus() == 0 || taskProcessDto.getStatus() == 1) {
@@ -224,8 +226,13 @@ public class TaskService {
         for (Map.Entry<String, TaskProcessDto> entry : taskProgressMap.entrySet()) {
             String taskId = entry.getKey();
             TaskProcessDto taskProcessDto = entry.getValue();
-            taskController.sendTaskProgress(taskId, taskProcessDto);
+            sendTaskProgress(taskId, taskProcessDto);
         }
+    }
+
+    public void sendTaskProgress(String taskId, TaskProcessDto taskProcessDto) {
+        // 使用SimpMessagingTemplate将消息发送到指定的主题
+        messagingTemplate.convertAndSend(TASK_PROGRESS_TOPIC + taskId, taskProcessDto);
     }
 
     public List<LLMTaskType> searchLLMTaskType(SearchLLMTaskTypeRequest searchLLMTaskTypeRequest) {

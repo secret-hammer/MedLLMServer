@@ -15,8 +15,8 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class AuthService {
 
-    private AuthenticationManager authenticationManager;
-    private JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider jwtTokenProvider;
 
     public String login(LoginRequest loginRequest) {
 

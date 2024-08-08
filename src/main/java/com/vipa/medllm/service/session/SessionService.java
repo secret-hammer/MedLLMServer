@@ -13,7 +13,6 @@ import org.springframework.retry.annotation.Retryable;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Example;
 
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
@@ -51,10 +50,7 @@ public class SessionService {
             if (!imageRepository.existsById(imageId)) {
                 throw new CustomException(CustomError.IMAGE_ID_NOT_FOUND);
             }
-            Session session = new Session();
-            session.setImageId(imageId);
-            session.setStatus(0);
-            session.setUserId(user.getUserId());
+            Session session = new Session(user.getUserId(), imageId, 0);
             sessionRepository.save(session);
             sessionList.add(session);
         }
@@ -67,7 +63,7 @@ public class SessionService {
 
         Query query = new Query();
         query.addCriteria(Criteria.where("userId").is(user.getUserId()));
-        if (sessionId != null) {
+        if (sessionId != null && !sessionId.isEmpty()) {
             query.addCriteria(Criteria.where("sessionId").is(new ObjectId(sessionId)));
         }
         if (imageId != null) {

@@ -5,19 +5,14 @@ import com.vipa.medllm.dto.request.image.UpdateImageInfo;
 import com.vipa.medllm.dto.request.image.SearchImageRequest;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
-import com.vipa.medllm.model.Image;
-import com.vipa.medllm.model.ImageGroup;
-import com.vipa.medllm.model.ImageType;
-import com.vipa.medllm.model.Project;
+import com.vipa.medllm.model.*;
 import com.vipa.medllm.repository.ImageGroupRepository;
 import com.vipa.medllm.repository.ImageRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -26,6 +21,8 @@ import org.springframework.stereotype.Service;
 
 import com.vipa.medllm.dto.request.image.UploadImageRequest;
 import com.vipa.medllm.repository.ImageTypeRepository;
+import com.vipa.medllm.service.session.SessionService;
+import com.vipa.medllm.service.user.UserService;
 import com.vipa.medllm.util.DirectoryUtil;
 import com.vipa.medllm.util.ImageValidator;
 
@@ -41,6 +38,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Service
 public class ImageService {
+    private final UserService userService;
+    private final SessionService sessionService;
+
     private final ImageTypeRepository imageTypeRepository;
     private final ImageValidator imageValidator;
     private final ImageGroupRepository imageGroupRepository;
@@ -54,10 +54,11 @@ public class ImageService {
             ObjectOptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public List<String> uploadImages(@Valid UploadImageRequest uploadImageRequest) {
         List<String> results = new ArrayList<>();
+        User user = userService.getCurrentUser();
         ImageGroup imageGroup = imageGroupRepository.findById(uploadImageRequest.getImageGroupId())
-                .orElseThrow(() -> new RuntimeException("Image group not found"));
+                .orElseThrow(() -> new CustomException(CustomError.GROUP_NOT_FOUND));
         ImageType imageType = imageTypeRepository.findById(uploadImageRequest.getImageTypeId())
-                .orElseThrow(() -> new RuntimeException("Image type not found"));
+                .orElseThrow(() -> new CustomException(CustomError.IMAGETYPE_NOT_FOUND));
 
         for (String imageUrl : uploadImageRequest.getImageUrls()) {
             if (imageValidator.isValidImage(imageUrl, imageTypeRepository)) {
@@ -67,8 +68,15 @@ public class ImageService {
                 image.setImageGroup(imageGroup);
                 image.setImageType(imageType);
                 imageRepository.save(image);
-                // startTasks(imageUrl); //todo: 待添加的接口
+
+                //创建session
+                sessionService.createSession(List.of(image.getImageId()));
+
+                // 创建静态资源服务器图片文件夹
                 createImageFolder(image);
+
+                // startTasks(imageUrl); //todo: 待添加的接口
+                
                 results.add("Success!");
             } else {
                 results.add("Failed: " + imageUrl + " - Invalid image format");
@@ -124,7 +132,8 @@ public class ImageService {
         // 对 selectedImages 进行排序，将精确匹配的放前面，模糊匹配的放后面
         List<Image> sortedImages = selectedImages.stream()
         .sorted((i1, i2) -> {
-            int i1Match = 0, i2Match = 0;
+            int i1Match = 0;
+            int i2Match = 0;
 
             if (searchImageRequest.getImageName() != null && !searchImageRequest.getImageName().isEmpty()) {
                 if (i1.getImageName().equals(searchImageRequest.getImageName())) {

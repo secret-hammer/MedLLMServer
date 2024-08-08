@@ -69,7 +69,8 @@
         </filter>
         <file>${logback.logdir}/RabbitMQ_error.${logback.appname}.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${logback.logdir}/RabbitMQ_error.${logback.appname}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>
+                ${logback.logdir}/RabbitMQ_error.${logback.appname}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <timeBasedFileNamingAndTriggeringPolicy
                 class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <!-- 每个日志文件大小限制 -->
@@ -92,7 +93,8 @@
         </filter>
         <file>${logback.logdir}/RabbitMQ_info.${logback.appname}.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${logback.logdir}/RabbitMQ_info.${logback.appname}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>
+                ${logback.logdir}/RabbitMQ_info.${logback.appname}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <timeBasedFileNamingAndTriggeringPolicy
                 class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <!-- 每个日志文件大小限制 -->
@@ -109,13 +111,13 @@
 
     <!-- 定义RabbitMQ回调的日志记录器 -->
     <logger name="rabbitmq_log" level="DEBUG" additivity="false">
-        <appender-ref ref="rabbitMQInfoLog"/>
-        <appender-ref ref="rabbitMQErrorLog"/>
+        <appender-ref ref="rabbitMQInfoLog" />
+        <appender-ref ref="rabbitMQErrorLog" />
     </logger>
 
 
     <!-- 设置日志级别 -->
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="console" />
         <appender-ref ref="fileErrorLog" />
         <appender-ref ref="fileInfoLog" />

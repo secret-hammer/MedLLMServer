@@ -29,13 +29,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 public class TaskContoller {
 
     private final TaskService taskService;
-    private static final String TASK_PROGRESS_TOPIC = "/topic/task_progress/";
-    private SimpMessagingTemplate messagingTemplate;
-
-    public void sendTaskProgress(String taskId, TaskProcessDto taskProcessDto) {
-        // 使用SimpMessagingTemplate将消息发送到指定的主题
-        messagingTemplate.convertAndSend(TASK_PROGRESS_TOPIC + taskId, taskProcessDto);
-    }
 
     @GetMapping("/searchLLMTaskType")
     public ResponseEntity<ResponseResult<List<LLMTaskType>>> searchLLMTaskType(

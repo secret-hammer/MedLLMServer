@@ -25,6 +25,8 @@ public enum CustomError {
 
     IMAGETYPE_NOT_FOUND(750, "Image type not found"),
 
+    SESSIONID_FORMAT_ERROR(760, "Session id format error"),
+
     ARGUMENT_NOT_VALID(801, "Argument not valid"),
     INTERNAL_SERVER_ERROR(800, "Internal server error");
 

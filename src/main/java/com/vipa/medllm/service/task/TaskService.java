@@ -70,7 +70,7 @@ public class TaskService {
     @Value("${computation.server.url}")
     private String computationServerUrl;
 
-    public Integer submitPathologyImageConvertTask(
+    public String submitPathologyImageConvertTask(
             @Valid CreatePathologyImageConvertTaskDto createPathologyImageConvertTaskDto)
             throws AmqpException, RedisConnectionFailureException, SerializationException {
         // 创建任务ID
@@ -85,10 +85,10 @@ public class TaskService {
         // 创建任务进度缓存
         redisCache.setCacheMapValue(TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto());
 
-        return 0;
+        return taskId;
     }
 
-    public void submitPathologyLLMInferenceTask(
+    public String submitPathologyLLMInferenceTask(
             @Valid CreatePathologyLLMInferenceTaskDto createPathologyLLMInferenceTaskDto)
             throws AmqpException, RedisConnectionFailureException, SerializationException {
         // 创建任务ID
@@ -109,11 +109,14 @@ public class TaskService {
 
         // 创建任务进度缓存
         redisCache.setCacheMapValue(TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto());
+
+        return taskId;
     }
 
     public void imageConvertTaskFinishCallback(@Valid ImageConvertTaskCallbackDto imageConvertTaskCallbackDto) {
         String taskId = imageConvertTaskCallbackDto.getTaskId();
-        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheObject(taskId);
+        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(TASK_PROGRESS_CACHE_KEY, taskId,
+                TaskProcessDto.class);
 
         // 主动推送任务进度
         sendTaskProgress(taskId, taskProcessDto);
@@ -145,7 +148,8 @@ public class TaskService {
 
     public void llmInferenceTaskFinishCallback(@Valid LLMInferenceTaskCallbackDto llmInferenceTaskCallbackDto) {
         String taskId = llmInferenceTaskCallbackDto.getTaskId();
-        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheObject(taskId);
+        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(TASK_PROGRESS_CACHE_KEY, taskId,
+                TaskProcessDto.class);
 
         // 主动推送任务进度
         sendTaskProgress(taskId, taskProcessDto);

@@ -17,32 +17,21 @@ public class CreatePathologyImageConvertTaskDto {
     @NotNull(message = "ProjectId cannot be null")
     private Integer projectId;
 
-    @NotNull(message = "Project name cannot be null")
-    private String projectName;
-
     @NotNull(message = "ImageId cannot be null")
     private Integer imageId;
-
-    @NotNull(message = "Image name cannot be null")
-    private String imageName;
 
     @NotNull(message = "Image URL cannot be null")
     private String imageUrl;
 
     public CreatePathologyImageConvertTaskDto(Project project, Image image) {
         this.projectId = project.getProjectId();
-        this.projectName = project.getProjectName();
         this.imageId = image.getImageId();
-        this.imageName = image.getImageName();
         this.imageUrl = image.getImageUrl();
     }
 
-    public CreatePathologyImageConvertTaskDto(Integer projectId, String projectName, Integer imageId, String imageName,
-            String imageUrl) {
+    public CreatePathologyImageConvertTaskDto(Integer projectId, Integer imageId, String imageUrl) {
         this.projectId = projectId;
-        this.projectName = projectName;
         this.imageId = imageId;
-        this.imageName = imageName;
         this.imageUrl = imageUrl;
     }
 }

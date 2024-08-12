@@ -239,12 +239,8 @@ public class TaskService {
         messagingTemplate.convertAndSend(TASK_PROGRESS_TOPIC + taskId, taskProcessDto);
     }
 
-    public List<LLMTaskType> searchLLMTaskType(SearchLLMTaskTypeRequest searchLLMTaskTypeRequest) {
-        Integer llmTaskTypeId = searchLLMTaskTypeRequest.getLlmTaskTypeId();
-        Boolean isPreProcessTask = searchLLMTaskTypeRequest.getIsPreProcessTask();
-        String llmTaskTypeName = searchLLMTaskTypeRequest.getLlmTaskTypeName();
-        String prompt = searchLLMTaskTypeRequest.getPrompt();
-        String description = searchLLMTaskTypeRequest.getDescription();
+    public List<LLMTaskType> searchLLMTaskType(Integer llmTaskTypeId, Boolean isPreProcessTask, String llmTaskTypeName,
+            String prompt, String description) {
 
         Specification<LLMTaskType> spec = Specification.where(null);
         if (llmTaskTypeId != null) {

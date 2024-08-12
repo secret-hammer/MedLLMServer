@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 logs/
 /src/main/resources/*.properties
+dump.rdb
 
 ### STS ###
 .apt_generated

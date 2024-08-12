@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.vipa.medllm.dto.request.project.CreateProjectInfo;
 import com.vipa.medllm.dto.request.project.UpdateProjectInfo;
 import com.vipa.medllm.dto.response.ResponseResult;
+import com.vipa.medllm.dto.response.SearchResult;
 import com.vipa.medllm.model.Project;
 import com.vipa.medllm.service.project.ProjectService;
 
@@ -52,17 +53,19 @@ public class ProjectController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ResponseResult<List<Project>>> searchProjects(
-            @RequestParam(required = false) Integer projectId, 
-            @RequestParam(required = false) String projectName, 
-            @RequestParam(required = false) Integer page, 
+    public ResponseEntity<ResponseResult<SearchResult<Project>>> searchProjects(
+            @RequestParam(required = false) Integer projectId,
+            @RequestParam(required = false) String projectName,
+            @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
 
-        List<Project> projects = projectService.searchProjects(projectId, projectName, page, size);
+        SearchResult<Project> searchResult = projectService.searchProjects(projectId, projectName, page, size);
 
-        ResponseResult<List<Project>> response = new ResponseResult<>(200, "Project search successfully", projects);
+        ResponseResult<SearchResult<Project>> response = new ResponseResult<>(200, "Project search successfully",
+                searchResult);
 
         return ResponseEntity.ok(response);
+
     }
 
     @PostMapping("/delete")

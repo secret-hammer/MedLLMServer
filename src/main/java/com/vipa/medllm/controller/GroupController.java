@@ -3,6 +3,7 @@ package com.vipa.medllm.controller;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.response.ResponseResult;
+import com.vipa.medllm.dto.response.SearchResult;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.service.group.GroupService;
 import jakarta.validation.Valid;
@@ -20,7 +21,7 @@ public class GroupController {
     private GroupService groupService;
 
     @GetMapping("/search")
-    public ResponseEntity<ResponseResult<List<ImageGroup>>> searchGroup(
+    public ResponseEntity<ResponseResult<SearchResult<ImageGroup>>> searchGroup(
             @RequestParam(required = false) Integer projectId,
             @RequestParam(required = false) Integer groupId,
             @RequestParam(required = false) String groupName,
@@ -28,8 +29,10 @@ public class GroupController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
 
-        List<ImageGroup> groups = groupService.searchGroup(projectId, groupId, groupName, groupDescription, page, size);
-        ResponseResult<List<ImageGroup>> response = new ResponseResult<>(200,
+        SearchResult<ImageGroup> groups = groupService.searchGroup(projectId, groupId, groupName, groupDescription,
+                page, size);
+
+        ResponseResult<SearchResult<ImageGroup>> response = new ResponseResult<>(200,
                 "Group information retrieved successfully", groups);
 
         return ResponseEntity.ok(response);

@@ -1,17 +1,20 @@
 package com.vipa.medllm.service.group;
 
 import com.vipa.medllm.repository.ImageRepository;
+
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.request.image.DeleteImageRequest;
+import com.vipa.medllm.dto.response.SearchResult;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.Project;
 import com.vipa.medllm.repository.ImageGroupRepository;
@@ -39,7 +42,7 @@ public class GroupService {
     private final ProjectRepository projectRepository;
 
     @Transactional
-    public List<ImageGroup> searchGroup(Integer projectId, Integer groupId, String groupName,
+    public SearchResult<ImageGroup> searchGroup(Integer projectId, Integer groupId, String groupName,
             String groupDescription, Integer page, Integer size) {
 
         Specification<ImageGroup> spec = Specification.where(null);
@@ -63,13 +66,17 @@ public class GroupService {
                             "%" + groupDescription + "%"));
         }
 
+        SearchResult<ImageGroup> searchResult = new SearchResult<>();
         List<ImageGroup> selectedGroups = null;
 
-        if(page != null && size != null && page >= 0 && size > 0) {
+        if (page != null && size != null && page >= 0 && size > 0) {
             Pageable pageable = PageRequest.of(page, size, Sort.by("imageGroupId").ascending());
-            selectedGroups = imageGroupRepository.findAll(spec, pageable).getContent();
+            Page<ImageGroup> imageGroupPage = imageGroupRepository.findAll(spec, pageable);
+            searchResult.setPageInfo(page, size, imageGroupPage.getTotalPages(), imageGroupPage.getTotalElements(),
+                    imageGroupPage.isFirst(), imageGroupPage.isLast(), imageGroupPage.isEmpty());
+            selectedGroups = imageGroupPage.getContent();
         } else {
-            selectedGroups = imageGroupRepository.findAll(spec);
+            selectedGroups = imageGroupRepository.findAll(spec, Sort.by("imageGroupId").ascending());
         }
 
         // 对 selectedGroups 进行排序，将精确匹配的放前面，模糊匹配的放后面
@@ -106,7 +113,8 @@ public class GroupService {
                     return Integer.compare(g2Match, g1Match); // 按匹配程度降序排列
                 }).toList();
 
-        return sortedGroups;
+        searchResult.setContent(sortedGroups);
+        return searchResult;
     }
 
     @Transactional

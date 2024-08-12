@@ -42,6 +42,16 @@ public class SessionService {
 
     private MongoTemplate mongoTemplate;
 
+    public Session createOneSession(int imageId) {
+        User user = userService.getCurrentUser();
+        if (!imageRepository.existsById(imageId)) {
+            throw new CustomException(CustomError.IMAGE_ID_NOT_FOUND);
+        }
+        Session session = new Session(user.getUserId(), imageId, 0);
+        sessionRepository.save(session);
+        return session;
+    }
+
     @Transactional
     public List<Session> createSession(List<Integer> imageIds) {
         User user = userService.getCurrentUser();

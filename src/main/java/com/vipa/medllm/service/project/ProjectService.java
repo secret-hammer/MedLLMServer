@@ -4,6 +4,7 @@ import com.vipa.medllm.util.DirectoryUtil;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.retry.annotation.Backoff;
@@ -13,11 +14,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest.GroupDetail;
 import com.vipa.medllm.dto.request.project.CreateProjectInfo;
 import com.vipa.medllm.dto.request.project.UpdateProjectInfo;
+import com.vipa.medllm.dto.response.SearchResult;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
 import com.vipa.medllm.model.ImageGroup;
@@ -121,7 +124,7 @@ public class ProjectService {
     }
 
     @Transactional
-    public List<Project> searchProjects(Integer projectId, String projectName, Integer page, Integer size) {
+    public SearchResult<Project> searchProjects(Integer projectId, String projectName, Integer page, Integer size) {
         User user = userService.getCurrentUser();
 
         Specification<Project> spec = Specification.where(null);
@@ -135,12 +138,17 @@ public class ProjectService {
                     "%" + projectName + "%"));
         }
 
+        SearchResult<Project> searchResult = new SearchResult<>();
         if (page != null && size != null && page >= 0 && size > 0) {
-            Pageable pageable = PageRequest.of(page, size);
-            return projectRepository.findAll(spec, pageable).getContent();
+            Pageable pageable = PageRequest.of(page, size, Sort.by("projectId").ascending());
+            Page<Project> projectPage = projectRepository.findAll(spec, pageable);
+            searchResult.setContent(projectPage.getContent());
+            searchResult.setPageInfo(page, size, projectPage.getTotalPages(), projectPage.getTotalElements(),
+                    projectPage.isFirst(), projectPage.isLast(), projectPage.isEmpty());
         } else {
-            return projectRepository.findAll(spec);
+            searchResult.setContent(projectRepository.findAll(spec, Sort.by("projectId").ascending()));
         }
+        return searchResult;
     }
 
     @Transactional

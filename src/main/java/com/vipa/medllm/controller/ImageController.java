@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.vipa.medllm.dto.request.image.UploadImageRequest;
 import com.vipa.medllm.dto.response.ResponseResult;
+import com.vipa.medllm.dto.response.SearchResult;
 import com.vipa.medllm.model.Image;
 import com.vipa.medllm.service.image.ImageService;
 
@@ -44,7 +45,7 @@ public class ImageController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ResponseResult<List<Image>>> searchImages(
+    public ResponseEntity<ResponseResult<SearchResult<Image>>> searchImages(
             @RequestParam(required = false) Integer imageId,
             @RequestParam(required = true) Integer imageGroupId,
             @RequestParam(required = false) String imageName,
@@ -53,10 +54,10 @@ public class ImageController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
 
+        SearchResult<Image> images = imageService.searchImages(imageId, imageGroupId, imageName, imageUrl, imageTypeId,
+                page, size);
 
-        List<Image> images = imageService.searchImages(imageId, imageGroupId, imageName, imageUrl, imageTypeId, page, size);
-
-        ResponseResult<List<Image>> response = new ResponseResult<>(200, "Image search successfully", images);
+        ResponseResult<SearchResult<Image>> response = new ResponseResult<>(200, "Image search successfully", images);
 
         return ResponseEntity.ok(response);
     }

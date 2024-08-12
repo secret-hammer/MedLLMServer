@@ -27,9 +27,9 @@ public class TaskServiceTest {
 
     @Test
     public void testSubmitPathologyImageConvertTask() {
-        Integer projectId = 1;
-        Integer imageId = 1;
-        String imageUrl = "http://localhost:8080/image/1.jpg";
+        Integer projectId = 3;
+        Integer imageId = 13;
+        String imageUrl = "/medical-data/wenxue/man_train2/2024-07-02/2024-07-02_09_50_32/33/1.tif";
 
         CreatePathologyImageConvertTaskDto createTaskDto = new CreatePathologyImageConvertTaskDto(projectId,
                 imageId,

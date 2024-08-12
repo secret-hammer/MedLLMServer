@@ -4,6 +4,7 @@ import com.vipa.medllm.util.DirectoryUtil;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -11,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.CreateGroupRequest.GroupDetail;
@@ -27,6 +29,7 @@ import com.vipa.medllm.repository.ImageTypeRepository;
 import com.vipa.medllm.repository.ProjectRepository;
 import com.vipa.medllm.repository.UserRepository;
 import com.vipa.medllm.service.group.GroupService;
+import com.vipa.medllm.service.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +47,7 @@ import java.util.Optional;
 public class ProjectService {
 
     private final GroupService groupService;
+    private final UserService userService;
 
     private final ProjectRepository projectRepository;
     private final ImageGroupRepository imageGroupRepository;
@@ -117,15 +121,12 @@ public class ProjectService {
     }
 
     @Transactional
-    public List<Project> searchProjects(Integer projectId, String projectName) {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        String usernameOrEmail = userDetails.getUsername();
-        Optional<User> optionalUser = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+    public List<Project> searchProjects(Integer projectId, String projectName, Integer page, Integer size) {
+        User user = userService.getCurrentUser();
 
         Specification<Project> spec = Specification.where(null);
 
-        spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("user"), optionalUser.get()));
+        spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("user"), user));
         if (projectId != null) {
             spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("projectId"), projectId));
         }
@@ -134,7 +135,12 @@ public class ProjectService {
                     "%" + projectName + "%"));
         }
 
-        return projectRepository.findAll(spec);
+        if (page != null && size != null && page >= 0 && size > 0) {
+            Pageable pageable = PageRequest.of(page, size);
+            return projectRepository.findAll(spec, pageable).getContent();
+        } else {
+            return projectRepository.findAll(spec);
+        }
     }
 
     @Transactional

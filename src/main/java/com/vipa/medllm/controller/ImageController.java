@@ -43,11 +43,18 @@ public class ImageController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("search")
+    @GetMapping("/search")
     public ResponseEntity<ResponseResult<List<Image>>> searchImages(
-            @Valid @RequestBody SearchImageRequest searchImageRequest) {
+            @RequestParam(required = false) Integer imageId,
+            @RequestParam(required = true) Integer imageGroupId,
+            @RequestParam(required = false) String imageName,
+            @RequestParam(required = false) String imageUrl,
+            @RequestParam(required = false) Integer imageTypeId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
 
-        List<Image> images = imageService.searchImages(searchImageRequest);
+
+        List<Image> images = imageService.searchImages(imageId, imageGroupId, imageName, imageUrl, imageTypeId, page, size);
 
         ResponseResult<List<Image>> response = new ResponseResult<>(200, "Image search successfully", images);
 

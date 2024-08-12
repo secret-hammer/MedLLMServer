@@ -1,7 +1,9 @@
 package com.vipa.medllm.service.group;
 
-import com.vipa.medllm.model.Image;
 import com.vipa.medllm.repository.ImageRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -38,7 +40,7 @@ public class GroupService {
 
     @Transactional
     public List<ImageGroup> searchGroup(Integer projectId, Integer groupId, String groupName,
-            String groupDescription) {
+            String groupDescription, Integer page, Integer size) {
 
         Specification<ImageGroup> spec = Specification.where(null);
         if (groupId != null) {
@@ -61,7 +63,14 @@ public class GroupService {
                             "%" + groupDescription + "%"));
         }
 
-        List<ImageGroup> selectedGroups = imageGroupRepository.findAll(spec, Sort.by("imageGroupId"));
+        List<ImageGroup> selectedGroups = null;
+
+        if(page != null && size != null && page >= 0 && size > 0) {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("imageGroupId").ascending());
+            selectedGroups = imageGroupRepository.findAll(spec, pageable).getContent();
+        } else {
+            selectedGroups = imageGroupRepository.findAll(spec);
+        }
 
         // 对 selectedGroups 进行排序，将精确匹配的放前面，模糊匹配的放后面
         List<ImageGroup> sortedGroups = selectedGroups.stream()

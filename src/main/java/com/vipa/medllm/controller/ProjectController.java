@@ -10,7 +10,6 @@ import com.vipa.medllm.model.Project;
 import com.vipa.medllm.service.project.ProjectService;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 
 import java.util.List;
@@ -54,9 +53,12 @@ public class ProjectController {
 
     @GetMapping("/search")
     public ResponseEntity<ResponseResult<List<Project>>> searchProjects(
-            @RequestParam(required = false) Integer projectId, @RequestParam(required = false) String projectName) {
+            @RequestParam(required = false) Integer projectId, 
+            @RequestParam(required = false) String projectName, 
+            @RequestParam(required = false) Integer page, 
+            @RequestParam(required = false) Integer size) {
 
-        List<Project> projects = projectService.searchProjects(projectId, projectName);
+        List<Project> projects = projectService.searchProjects(projectId, projectName, page, size);
 
         ResponseResult<List<Project>> response = new ResponseResult<>(200, "Project search successfully", projects);
 

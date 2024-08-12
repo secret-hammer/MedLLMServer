@@ -18,6 +18,9 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import com.vipa.medllm.dto.request.image.UploadImageRequest;
 import com.vipa.medllm.repository.ImageTypeRepository;
@@ -104,30 +107,37 @@ public class ImageService {
     }
 
     @Transactional
-    public List<Image> searchImages(SearchImageRequest searchImageRequest) {
+    public List<Image> searchImages(Integer imageId, Integer imageGroupId, String imageName, String imageUrl,
+            Integer imageTypeId,  Integer page, Integer size) {
         Specification<Image> spec = Specification.where(null);
 
-        if(searchImageRequest.getImageGroupId() != null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageGroup").get("imageGroupId"), searchImageRequest.getImageGroupId()));
+        spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageGroup").get("imageGroupId"), imageGroupId));
+
+
+        if(imageId != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageId"), imageId));
         }
 
-        if(searchImageRequest.getImageId() != null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageId"), searchImageRequest.getImageId()));
+        if(imageTypeId != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageType").get("imageTypeId"), imageTypeId));
         }
 
-        if(searchImageRequest.getImageTypeId()!=null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("imageType").get("imageTypeId"), searchImageRequest.getImageTypeId()));
+        if(imageName != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageName"), "%" + imageName + "%"));
         }
 
-        if(searchImageRequest.getImageName()!=null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageName"), "%" + searchImageRequest.getImageName() + "%"));
+        if(imageUrl != null){
+            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageUrl"), "%" + imageUrl + "%"));
         }
 
-        if(searchImageRequest.getImageUrl() != null){
-            spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("imageUrl"), "%" + searchImageRequest.getImageUrl() + "%"));
-        }
+        List<Image> selectedImages = null;
 
-        List<Image> selectedImages = imageRepository.findAll(spec);
+        if(page != null && size != null && page >= 0 && size > 0) {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("imageId").ascending());
+            selectedImages = imageRepository.findAll(spec, pageable).getContent();
+        } else {
+            selectedImages = imageRepository.findAll(spec);
+        }
 
         // 对 selectedImages 进行排序，将精确匹配的放前面，模糊匹配的放后面
         List<Image> sortedImages = selectedImages.stream()
@@ -135,28 +145,28 @@ public class ImageService {
             int i1Match = 0;
             int i2Match = 0;
 
-            if (searchImageRequest.getImageName() != null && !searchImageRequest.getImageName().isEmpty()) {
-                if (i1.getImageName().equals(searchImageRequest.getImageName())) {
+            if (imageName != null && !imageName.isEmpty()) {
+                if (i1.getImageName().equals(imageName)) {
                     i1Match += 2;
-                } else if (i1.getImageName().contains(searchImageRequest.getImageName())) {
+                } else if (i1.getImageName().contains(imageName)) {
                     i1Match += 1;
                 }
-                if (i2.getImageName().equals(searchImageRequest.getImageName())) {
+                if (i2.getImageName().equals(imageName)) {
                     i2Match += 2;
-                } else if (i2.getImageName().contains(searchImageRequest.getImageName())) {
+                } else if (i2.getImageName().contains(imageName)) {
                     i2Match += 1;
                 }
             }
 
-            if (searchImageRequest.getImageUrl() != null && !searchImageRequest.getImageUrl().isEmpty()) {
-                if (i1.getImageUrl().equals(searchImageRequest.getImageUrl())) {
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                if (i1.getImageUrl().equals(imageUrl)) {
                     i1Match += 2;
-                } else if (i1.getImageUrl().contains(searchImageRequest.getImageUrl())) {
+                } else if (i1.getImageUrl().contains(imageUrl)) {
                     i1Match += 1;
                 }
-                if (i2.getImageUrl().equals(searchImageRequest.getImageUrl())) {
+                if (i2.getImageUrl().equals(imageUrl)) {
                     i2Match += 2;
-                } else if (i2.getImageUrl().contains(searchImageRequest.getImageUrl())) {
+                } else if (i2.getImageUrl().contains(imageUrl)) {
                     i2Match += 1;
                 }
             }

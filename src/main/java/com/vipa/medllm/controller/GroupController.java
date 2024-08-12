@@ -24,9 +24,11 @@ public class GroupController {
             @RequestParam(required = false) Integer projectId,
             @RequestParam(required = false) Integer groupId,
             @RequestParam(required = false) String groupName,
-            @RequestParam(required = false) String groupDescription) {
+            @RequestParam(required = false) String groupDescription,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
 
-        List<ImageGroup> groups = groupService.searchGroup(projectId, groupId, groupName, groupDescription);
+        List<ImageGroup> groups = groupService.searchGroup(projectId, groupId, groupName, groupDescription, page, size);
         ResponseResult<List<ImageGroup>> response = new ResponseResult<>(200,
                 "Group information retrieved successfully", groups);
 

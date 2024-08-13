@@ -38,11 +38,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
+import static java.nio.file.attribute.PosixFilePermission.*;
 
 @Service
 @Slf4j
@@ -88,7 +92,9 @@ public class ProjectService {
                         "com.vipa.medllm.service.project.createProjects: Project folder already exists: " + folderPath);
             } else {
                 try {
-                    DirectoryUtil.createDirectory(dir);
+
+                    String perms = "rwxrwxrwx";
+                    DirectoryUtil.createDirectory(dir, perms);
                 } catch (IOException e) {
                     log.error(
                             "com.vipa.medllm.service.project.createProjects: Error creating project folder: "

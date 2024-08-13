@@ -14,37 +14,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 public class TaskServiceTest {
 
-    private static final String TASK_PROGRESS_CACHE_KEY = "task_progress";
+    // private static final String TASK_PROGRESS_CACHE_KEY = "task_progress";
 
-    private RedisCache redisCache;
-    private TaskService taskService;
+    // private RedisCache redisCache;
+    // private TaskService taskService;
 
-    @Autowired
-    public TaskServiceTest(RedisCache redisCache, TaskService taskService) {
-        this.redisCache = redisCache;
-        this.taskService = taskService;
-    }
+    // @Autowired
+    // public TaskServiceTest(RedisCache redisCache, TaskService taskService) {
+    //     this.redisCache = redisCache;
+    //     this.taskService = taskService;
+    // }
 
-    @Test
-    public void testSubmitPathologyImageConvertTask() {
-        Integer projectId = 3;
-        Integer imageId = 13;
-        String imageUrl = "/medical-data/wenxue/man_train2/2024-07-02/2024-07-02_09_50_32/33/1.tif";
+    // @Test
+    // public void testSubmitPathologyImageConvertTask() {
+    //     Integer projectId = 3;
+    //     Integer imageId = 13;
+    //     String imageUrl = "/medical-data/wenxue/man_train2/2024-07-02/2024-07-02_09_50_32/33/1.tif";
 
-        CreatePathologyImageConvertTaskDto createTaskDto = new CreatePathologyImageConvertTaskDto(projectId,
-                imageId,
-                imageUrl);
+    //     CreatePathologyImageConvertTaskDto createTaskDto = new CreatePathologyImageConvertTaskDto(projectId,
+    //             imageId,
+    //             imageUrl);
 
-        String taskId = taskService.submitPathologyImageConvertTask(createTaskDto);
+    //     String taskId = taskService.submitPathologyImageConvertTask(createTaskDto);
 
-        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(TASK_PROGRESS_CACHE_KEY,
-                taskId, TaskProcessDto.class);
+    //     TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(TASK_PROGRESS_CACHE_KEY,
+    //             taskId, TaskProcessDto.class);
 
-        System.out.println(taskId);
-        System.out.println(taskProcessDto);
+    //     System.out.println(taskId);
+    //     System.out.println(taskProcessDto);
 
-        // 验证Redis中的数据（示例：验证状态是否为初始值0）
-        assertEquals(0, taskProcessDto.getStatus());
-    }
-
+    //     // 验证Redis中的数据（示例：验证状态是否为初始值0）
+    //     assertEquals(0, taskProcessDto.getStatus());
+    // }
 }

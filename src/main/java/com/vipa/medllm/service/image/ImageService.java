@@ -35,11 +35,13 @@ import com.vipa.medllm.util.ImageValidator;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.nio.file.attribute.PosixFilePermission;
 
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -237,7 +239,8 @@ public class ImageService {
             log.error("com.vipa.medllm.service.image.createImageFolder: Image folder already exists: " + folderPath);
         } else {
             try {
-                DirectoryUtil.createDirectory(dir);
+                String perms = "rwxrwxrwx";
+                DirectoryUtil.createDirectory(dir, perms);
             } catch (IOException e) {
                 log.error(
                         "com.vipa.medllm.service.image.createImageFolder: Error creating image folder: " + folderPath);

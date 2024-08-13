@@ -2,6 +2,12 @@ package com.vipa.medllm.util;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+
+
+import java.util.Set;
+
 
 public class DirectoryUtil {
     public static void deleteDirectory(Path dir) throws IOException {
@@ -20,9 +26,12 @@ public class DirectoryUtil {
         });
     }
 
-    public static void createDirectory(Path dir) throws IOException {
+    public static void createDirectory(Path dir, String perms) throws IOException {
         if (!Files.exists(dir)) {
+            // 解析这个字符串，设置权限
+            Set<PosixFilePermission> permissions = PosixFilePermissions.fromString(perms);
             Files.createDirectories(dir);
+            Files.setPosixFilePermissions(dir, permissions);
         }
     }
 }

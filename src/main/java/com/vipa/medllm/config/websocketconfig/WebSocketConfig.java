@@ -15,7 +15,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
         // 注册一个WebSocket端点，前端可以连接这个端点进行通信
-        registry.addEndpoint("/task-progress").setAllowedOrigins("*").withSockJS();
+        registry.addEndpoint("/task-progress").setAllowedOrigins("*");
     }
 
     @Override

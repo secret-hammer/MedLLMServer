@@ -29,10 +29,10 @@ public class Session {
     private Timestamp updatedTime;
 
     @JsonIgnore
-    @DBRef // 这是一个引用指向大模型预推理问答对的列表
+    @DBRef(lazy = true) // 这是一个引用指向大模型预推理问答对的列表
     private Map<Integer, QAPair> qaPairPreInferenceTaskMap = new HashMap<>();
 
-    @DBRef // 这是一个引用指向历史问答对的列表，按顺序存放
+    @DBRef(lazy = true) // 这是一个引用指向历史问答对的列表，按顺序存放
     private List<QAPair> qaPairHistoryList = new ArrayList<>();
 
     @NotNull(message = "User Id is required")

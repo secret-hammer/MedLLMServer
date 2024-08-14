@@ -17,7 +17,7 @@ public class QAPair {
     @Id
     private ObjectId qaPairId;
 
-    @DBRef
+    @DBRef(lazy = true)
     private Session session;
 
     @NotNull(message = "LLM task type id is required")

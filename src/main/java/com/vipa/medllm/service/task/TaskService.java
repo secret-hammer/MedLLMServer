@@ -56,7 +56,7 @@ public class TaskService {
     private final SessionRepository sessionRepository;
     private final LLMTaskTypeRepository llmTaskTypeRepository;
 
-    private SimpMessagingTemplate messagingTemplate;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private static final String IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY = "pathology_image_convert_task_progress";
     private static final String IMAGE_CONVERT_TASK_SUCCESS_CACHE_KEY = "pathology_image_convert_task_success";
@@ -90,7 +90,7 @@ public class TaskService {
                 createPathologyImageConvertTaskDto);
 
         // 创建任务进度缓存
-        redisCache.setCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto());
+        redisCache.setCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto(createPathologyImageConvertTaskDto.getImageId()));
 
         return taskId;
     }
@@ -115,7 +115,7 @@ public class TaskService {
                 new Timestamp(System.currentTimeMillis())));
 
         // 创建任务进度缓存
-        redisCache.setCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto());
+        redisCache.setCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto(createPathologyLLMInferenceTaskDto.getImageId()));
 
         return taskId;
     }
@@ -186,6 +186,8 @@ public class TaskService {
             redisCache.setCacheMapValue(LLM_INFERENCE_TASK_FAILED_CACHE_KEY, taskId, taskProcessDto);
         }
         else if(newStatus == 2){
+            taskProcessDto.updateResult(newStatus, newProgress, llmInferenceTaskCallbackDto.getResult());
+            System.out.println("保存结果开始");
             Session session = sessionRepository.findByImageId(llmInferenceTaskCallbackDto.getImageId());
             
             QAPair qaPair = qaPairService.findQAPair(null, session.getSessionId(),
@@ -212,9 +214,11 @@ public class TaskService {
             // 更新任务进度缓存
             redisCache.delCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId);
             redisCache.setCacheMapValue(LLM_INFERENCE_TASK_SUCCESS_CACHE_KEY, taskId, taskProcessDto);
+            System.out.println("保存结果结束");
         }
         // 主动推送任务进度
         sendTaskProgress(taskId, taskProcessDto);
+        System.out.println("推送任务进度结束");
     }
 
     private void sessionStatusTransferHandler(Session session, Integer task) {

@@ -42,7 +42,7 @@ public class QAPairService {
         }
 
         if (sessionId != null) {
-            query.addCriteria(Criteria.where("session.id").is(new ObjectId(sessionId)));
+            query.addCriteria(Criteria.where("session.sessionId").is(new ObjectId(sessionId)));
         }
 
         if (llmTaskTypeId != null) {

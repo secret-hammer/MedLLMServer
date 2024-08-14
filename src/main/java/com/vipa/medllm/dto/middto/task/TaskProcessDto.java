@@ -9,6 +9,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class TaskProcessDto {
 
+    private Integer imageId;
+
     // 0:未开始 1:进行中 2:已完成 3:失败
     private Integer status;
 
@@ -22,7 +24,8 @@ public class TaskProcessDto {
 
     private Timestamp updateTime;
 
-    public TaskProcessDto() {
+    public TaskProcessDto(Integer imageId) {
+        this.imageId = imageId;
         this.status = 0;
         this.progress = 0.0f;
         this.result = "";

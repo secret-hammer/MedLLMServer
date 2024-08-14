@@ -27,6 +27,10 @@ public class Image {
     @Column(nullable = false, length = 255)
     private String imageName;
 
+    // 0:代表刚刚上传；
+    // 1:代表大模型预推理结束（病理图处理未结束）
+    // 2:代表病理图处理结束（大模型预推理未结束）
+    // 3:代表病理图预处理全部完成，处于可用交互状态
     @Column(nullable = false)
     private Integer status = 0;
 

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 
-public interface ImageRepository extends JpaRepository<Image, Integer>, JpaSpecificationExecutor<Image>{
+public interface ImageRepository extends JpaRepository<Image, Integer>, JpaSpecificationExecutor<Image> {
     // Additional custom queries can be defined here
     List<Image> findByImageGroupImageGroupId(Integer imageGroupId);
 

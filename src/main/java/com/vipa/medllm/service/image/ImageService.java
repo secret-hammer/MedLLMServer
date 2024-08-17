@@ -70,12 +70,13 @@ public class ImageService {
                 .orElseThrow(() -> new CustomException(CustomError.IMAGETYPE_NOT_FOUND));
 
         for (String imageUrl : uploadImageRequest.getImageUrls()) {
-            if (imageValidator.isValidImage(imageUrl, imageTypeRepository)) {
+            if (imageValidator.isValidImage(imageUrl, imageType)) {
                 Image image = new Image();
                 image.setImageUrl(imageUrl);
                 image.setImageName(getImageName(imageUrl));
                 image.setImageGroup(imageGroup);
                 image.setImageType(imageType);
+                image.setStatus(0);
                 imageRepository.save(image);
 
                 // 创建session
@@ -88,7 +89,7 @@ public class ImageService {
 
                 results.add("Success!");
             } else {
-                results.add("Failed: " + imageUrl + " - Invalid image format");
+                results.add("Failed: " + imageUrl + " - Invalid image format or file not found.");
             }
         }
         return results;

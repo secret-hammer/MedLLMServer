@@ -15,11 +15,15 @@ import com.vipa.medllm.dto.request.group.CreateGroupRequest;
 import com.vipa.medllm.dto.request.group.UpdateGroupRequest;
 import com.vipa.medllm.dto.request.image.DeleteImageRequest;
 import com.vipa.medllm.dto.response.SearchResult;
+import com.vipa.medllm.dto.response.group.GroupSearchResult;
+import com.vipa.medllm.model.Image;
 import com.vipa.medllm.model.ImageGroup;
 import com.vipa.medllm.model.Project;
+import com.vipa.medllm.model.Session;
 import com.vipa.medllm.repository.ImageGroupRepository;
 import org.springframework.stereotype.Service;
 import com.vipa.medllm.repository.ProjectRepository;
+import com.vipa.medllm.repository.SessionRepository;
 import com.vipa.medllm.exception.CustomError;
 import com.vipa.medllm.exception.CustomException;
 import com.vipa.medllm.service.image.ImageService;
@@ -30,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -40,6 +45,7 @@ public class GroupService {
     private final ImageGroupRepository imageGroupRepository;
     private final ImageRepository imageRepository;
     private final ProjectRepository projectRepository;
+    private final SessionRepository sessionRepository;
 
     @Transactional
     public SearchResult<ImageGroup> searchGroup(Integer projectId, Integer groupId, String groupName,
@@ -66,7 +72,7 @@ public class GroupService {
                             "%" + groupDescription + "%"));
         }
 
-        SearchResult<ImageGroup> searchResult = new SearchResult<>();
+        SearchResult<ImageGroup> searchResult = new GroupSearchResult();
         List<ImageGroup> selectedGroups = null;
 
         if (page != null && size != null && page >= 0 && size > 0) {
@@ -114,6 +120,24 @@ public class GroupService {
                 }).toList();
 
         searchResult.setContent(sortedGroups);
+
+        // 统计每个组内图片的状态
+        List<List<Integer>> imageStatus = new ArrayList<>();
+        for (ImageGroup group : sortedGroups) {
+            // 0 , 1, 2 ,3 分别代表 未处理，大模型预推理结束，病理图处理结束，病理图预处理全部完成
+            // 按顺序存放
+            List<Image> images = group.getImages();
+            List<Integer> imageIds = images.stream().map(Image::getImageId).collect(Collectors.toList());
+            List<Session> sessions = sessionRepository.findByImageIdIn(imageIds);
+
+            List<Integer> statusList = new ArrayList<>(Arrays.asList(0, 0, 0, 0));
+            for (Session session : sessions) {
+                int status = session.getStatus();
+                statusList.set(status, statusList.get(status) + 1);
+            }
+            imageStatus.add(statusList);
+        }
+        ((GroupSearchResult) searchResult).setImageStatus(imageStatus);
         return searchResult;
     }
 

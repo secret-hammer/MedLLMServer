@@ -8,12 +8,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.vipa.medllm.config.redisconfig.RedisCache;
 import com.vipa.medllm.controller.TaskContoller;
 import com.vipa.medllm.dto.middto.task.TaskProcessDto;
+import com.vipa.medllm.dto.request.image.UpdateImageInfo;
 import com.vipa.medllm.dto.request.task.LiveQARequest;
 import com.vipa.medllm.dto.request.task.LiveQAToComputationRequest;
 import com.vipa.medllm.dto.request.task.SearchLLMTaskTypeRequest;
@@ -30,9 +34,11 @@ import com.vipa.medllm.dto.middto.task.CreatePathologyLLMInferenceTaskDto;
 import com.vipa.medllm.dto.middto.task.ImageConvertTaskCallbackDto;
 import com.vipa.medllm.dto.middto.task.LLMInferenceTaskCallbackDto;
 import com.vipa.medllm.dto.middto.session.CreateQAPairDto;
+import com.vipa.medllm.service.image.ImageService;
 import com.vipa.medllm.service.session.QAPairService;
 
 import io.jsonwebtoken.io.SerializationException;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +51,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class TaskService {
+
     private final RabbitTemplate rabbitTemplate;
 
     private final RedisCache redisCache;
@@ -64,7 +71,6 @@ public class TaskService {
     private static final String LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY = "pathology_llm_inference_task_progress";
     private static final String LLM_INFERENCE_TASK_SUCCESS_CACHE_KEY = "pathology_llm_inference_task_success";
     private static final String LLM_INFERENCE_TASK_FAILED_CACHE_KEY = "pathology_llm_inference_task_failed";
-
 
     private static final String TASK_EXCHANGE = "task_exchange";
     private static final String PATHOLOGY_IMAGE_CONVERT_ROUTINGKEY = "pathology_image_convert";
@@ -90,7 +96,8 @@ public class TaskService {
                 createPathologyImageConvertTaskDto);
 
         // 创建任务进度缓存
-        redisCache.setCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto(createPathologyImageConvertTaskDto.getImageId()));
+        redisCache.setCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId,
+                new TaskProcessDto(createPathologyImageConvertTaskDto.getImageId()));
 
         return taskId;
     }
@@ -115,45 +122,44 @@ public class TaskService {
                 new Timestamp(System.currentTimeMillis())));
 
         // 创建任务进度缓存
-        redisCache.setCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId, new TaskProcessDto(createPathologyLLMInferenceTaskDto.getImageId()));
+        redisCache.setCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId,
+                new TaskProcessDto(createPathologyLLMInferenceTaskDto.getImageId()));
 
         return taskId;
     }
 
+    @Transactional
+    @Retryable(retryFor = {
+            ObjectOptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void imageConvertTaskFinishCallback(@Valid ImageConvertTaskCallbackDto imageConvertTaskCallbackDto) {
         String taskId = imageConvertTaskCallbackDto.getTaskId();
 
-        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId,
+        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(
+                IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId,
                 TaskProcessDto.class);
 
         Integer newStatus = imageConvertTaskCallbackDto.getStatus();
         Float newProgress = imageConvertTaskCallbackDto.getProgress();
 
-        if(newStatus == 0 || newStatus == 1) {
+        if (newStatus == 0 || newStatus == 1) {
             taskProcessDto.updateProgress(newStatus, newProgress);
             // 保存任务进度缓存
             redisCache.setCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId, taskProcessDto);
-        } 
-        else if(newStatus == 3) {
+        } else if (newStatus == 3) {
             taskProcessDto.updateResult(newStatus, newProgress, imageConvertTaskCallbackDto.getResult());
             log.error("imageConvertTaskFinishCallback: task failed, taskId: {}, message {}", taskId,
-            taskProcessDto.getResult());
+                    taskProcessDto.getResult());
             // 更新任务进度缓存
             redisCache.delCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId);
             redisCache.setCacheMapValue(IMAGE_CONVERT_TASK_FAILED_CACHE_KEY, taskId, taskProcessDto);
-        }
-        else if(newStatus == 2) {
+        } else if (newStatus == 2) {
             taskProcessDto.updateResult(newStatus, newProgress, imageConvertTaskCallbackDto.getResult());
 
             Session session = sessionRepository.findByImageId(imageConvertTaskCallbackDto.getImageId());
-            Image image = imageRepository.findById(imageConvertTaskCallbackDto.getImageId()).get();
-            
+
             // 根据session的状态执行状态转移
             sessionStatusTransferHandler(session, 1);
             sessionRepository.save(session);
-            //同步image的状态
-            image.setStatus(session.getStatus());
-            imageRepository.save(image);
 
             // 更新任务进度缓存
             redisCache.delCacheMapValue(IMAGE_CONVERT_TASK_PROGRESS_CACHE_KEY, taskId);
@@ -162,36 +168,37 @@ public class TaskService {
 
         // 主动推送任务进度
         sendTaskProgress(taskId, taskProcessDto);
-        
     }
 
+    @Transactional
+    @Retryable(retryFor = {
+            ObjectOptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void llmInferenceTaskFinishCallback(@Valid LLMInferenceTaskCallbackDto llmInferenceTaskCallbackDto) {
         String taskId = llmInferenceTaskCallbackDto.getTaskId();
-        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId,
+        TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(
+                LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId,
                 TaskProcessDto.class);
 
         Integer newStatus = llmInferenceTaskCallbackDto.getStatus();
         Float newProgress = llmInferenceTaskCallbackDto.getProgress();
-        
-        if(newStatus == 0 || newStatus == 1){
+
+        if (newStatus == 0 || newStatus == 1) {
             taskProcessDto.updateProgress(newStatus, newProgress);
             // 保存任务进度缓存
             redisCache.setCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId, taskProcessDto);
-        }
-        else if(newStatus == 3){
+        } else if (newStatus == 3) {
             taskProcessDto.updateResult(newStatus, newProgress, llmInferenceTaskCallbackDto.getResult());
-            log.error("llmInferenceTaskFinishCallback: task failed, taskId: {}, message {}", taskId, taskProcessDto.getResult());
+            log.error("llmInferenceTaskFinishCallback: task failed, taskId: {}, message {}", taskId,
+                    taskProcessDto.getResult());
             // 更新任务进度缓存
             redisCache.delCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId);
             redisCache.setCacheMapValue(LLM_INFERENCE_TASK_FAILED_CACHE_KEY, taskId, taskProcessDto);
-        }
-        else if(newStatus == 2){
+        } else if (newStatus == 2) {
             taskProcessDto.updateResult(newStatus, newProgress, llmInferenceTaskCallbackDto.getResult());
-            System.out.println("保存结果开始");
             Session session = sessionRepository.findByImageId(llmInferenceTaskCallbackDto.getImageId());
-            
+
             QAPair qaPair = qaPairService.findQAPair(null, session.getSessionId(),
-                llmInferenceTaskCallbackDto.getLlmTaskTypeId());
+                    llmInferenceTaskCallbackDto.getLlmTaskTypeId());
 
             qaPair.setAnswer(taskProcessDto.getResult());
             qaPair.setAnswerTime(new Timestamp(System.currentTimeMillis()));
@@ -199,26 +206,20 @@ public class TaskService {
 
             Map<Integer, QAPair> qaPairPreInferenceTaskMap = session.getQaPairPreInferenceTaskMap();
             qaPairPreInferenceTaskMap.put(llmInferenceTaskCallbackDto.getLlmTaskTypeId(), qaPair);
-            
+
             // 如果所有预处理任务都执行完毕
             if (qaPairPreInferenceTaskMap.size() == llmTaskTypeRepository.countByIsPreProcessTask(true)) {
                 // 根据session的状态执行状态转移
                 sessionStatusTransferHandler(session, 2);
-                //同步image的状态
-                Image image = imageRepository.findById(llmInferenceTaskCallbackDto.getImageId()).get();
-                image.setStatus(session.getStatus());
-                imageRepository.save(image);
             }
             sessionRepository.save(session);
 
             // 更新任务进度缓存
             redisCache.delCacheMapValue(LLM_INFERENCE_TASK_PROGRESS_CACHE_KEY, taskId);
             redisCache.setCacheMapValue(LLM_INFERENCE_TASK_SUCCESS_CACHE_KEY, taskId, taskProcessDto);
-            System.out.println("保存结果结束");
         }
         // 主动推送任务进度
         sendTaskProgress(taskId, taskProcessDto);
-        System.out.println("推送任务进度结束");
     }
 
     private void sessionStatusTransferHandler(Session session, Integer task) {
@@ -251,7 +252,6 @@ public class TaskService {
                 break;
         }
     }
-
 
     public void sendTaskProgress(String taskId, TaskProcessDto taskProcessDto) {
         // 使用SimpMessagingTemplate将消息发送到指定的主题

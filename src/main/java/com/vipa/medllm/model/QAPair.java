@@ -6,6 +6,8 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -18,6 +20,7 @@ public class QAPair {
     private ObjectId qaPairId;
 
     @DBRef(lazy = true)
+    @JsonIgnore
     private Session session;
 
     @NotNull(message = "LLM task type id is required")

@@ -7,7 +7,6 @@ import lombok.AllArgsConstructor;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
-import java.util.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -32,7 +31,7 @@ public class Image {
     // 2:代表病理图处理结束（大模型预推理未结束）
     // 3:代表病理图预处理全部完成，处于可用交互状态
     @Column(nullable = false)
-    private Integer status = 0;
+    private Integer status;
 
     @Column(nullable = false, updatable = false)
     @org.hibernate.annotations.CreationTimestamp

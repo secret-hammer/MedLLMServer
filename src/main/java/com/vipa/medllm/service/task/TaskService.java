@@ -128,9 +128,6 @@ public class TaskService {
         return taskId;
     }
 
-    @Transactional
-    @Retryable(retryFor = {
-            ObjectOptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void imageConvertTaskFinishCallback(@Valid ImageConvertTaskCallbackDto imageConvertTaskCallbackDto) {
         String taskId = imageConvertTaskCallbackDto.getTaskId();
 
@@ -170,9 +167,6 @@ public class TaskService {
         sendTaskProgress(taskId, taskProcessDto);
     }
 
-    @Transactional
-    @Retryable(retryFor = {
-            ObjectOptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void llmInferenceTaskFinishCallback(@Valid LLMInferenceTaskCallbackDto llmInferenceTaskCallbackDto) {
         String taskId = llmInferenceTaskCallbackDto.getTaskId();
         TaskProcessDto taskProcessDto = redisCache.<TaskProcessDto>getCacheMapValue(

@@ -18,6 +18,7 @@ public class LLMTaskType {
     private String llmTaskTypeName;
 
     @Column(nullable = false)
+    @Convert(converter = BooleanConverter.class)
     private Boolean isPreProcessTask;
 
     @Column(nullable = false, length = 2000)
@@ -25,4 +26,18 @@ public class LLMTaskType {
 
     @Column(nullable = false, length = 2000)
     private String description;
+}
+
+@Converter
+class BooleanConverter implements AttributeConverter<Boolean, Integer> {
+
+    @Override
+    public Integer convertToDatabaseColumn(Boolean attribute) {
+        return (attribute != null && attribute) ? 1 : 0;
+    }
+
+    @Override
+    public Boolean convertToEntityAttribute(Integer dbData) {
+        return dbData != null && dbData == 1;
+    }
 }

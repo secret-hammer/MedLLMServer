@@ -52,7 +52,6 @@ public class SessionService {
         return session;
     }
 
-    @Transactional
     public List<Session> createSession(List<Integer> imageIds) {
         User user = userService.getCurrentUser();
         List<Session> sessionList = new ArrayList<>();
@@ -83,9 +82,6 @@ public class SessionService {
         return mongoTemplate.find(query, Session.class);
     }
 
-    @Transactional
-    @Retryable(retryFor = {
-            OptimisticLockingFailureException.class }, maxAttempts = 3, backoff = @Backoff(delay = 100))
     public void insertQAPairIntoSession(String sessionId, String qaPairId) {
         Optional<Session> optionalSession = sessionRepository.findById(new ObjectId(sessionId));
         Optional<QAPair> optionalQAPair = qaPairRepository.findById(new ObjectId(qaPairId));

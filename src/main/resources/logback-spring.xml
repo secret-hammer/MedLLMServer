@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- 定义上下文名称 -->
-    <contextName>medllm_dev</contextName>
+    <contextName>medllm</contextName>
 
     <springProperty name="logback.logdir" source="logback.logdir" />
     <springProperty name="logback.appname" source="logback.appname" />

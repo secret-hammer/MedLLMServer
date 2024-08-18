@@ -12,6 +12,7 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 
 import org.springframework.core.convert.converter.Converter;
@@ -37,11 +38,11 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         return new MongoTemplate(MongoClients.create(mongoUri), getDatabaseName());
     }
 
-    // 事务管理器，用于支持MongoDB事务（只能在副本集上使用，暂时在本地模拟MongoDB集群）
-    @Bean
-    MongoTransactionManager transactionManager(MongoDatabaseFactory dbFactory) {
-        return new MongoTransactionManager(dbFactory);
-    }
+    // // 事务管理器，用于支持MongoDB事务（只能在副本集上使用，暂时在本地模拟MongoDB集群）
+    // @Bean
+    // MongoTransactionManager transactionManager(MongoDatabaseFactory dbFactory) {
+    //     return new MongoTransactionManager(dbFactory);
+    // }
 
     @Override
     public MongoCustomConversions customConversions() {
@@ -49,6 +50,11 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         converters.add(new DateToTimestampConverter());
         converters.add(new TimestampToDateConverter());
         return new MongoCustomConversions(converters);
+    }
+
+    @Bean
+    public MongoClient mongoClient() {
+        return MongoClients.create(mongoUri);
     }
 
 }

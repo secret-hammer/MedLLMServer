@@ -3,8 +3,10 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-logs/
-/src/main/resources/*.properties
+**/logs/
+**/log/
+service/*/*_data/*
+!service/*/*_data/.gitkeep
 dump.rdb
 
 ### STS ###

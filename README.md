@@ -71,7 +71,7 @@
 
 ```sql
 # 创建数据库
-CREATE DATABASE MedLabel_dev
+CREATE DATABASE MedLLM_dev
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 

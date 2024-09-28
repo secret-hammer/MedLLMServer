@@ -98,9 +98,9 @@ CREATE TABLE ImageType (
     ImageTypeName VARCHAR(50) NOT NULL,
     ImageExtensions VARCHAR(500) NOT NULL
 );
-INSERT INTO ImageType (ImageTypeName, ImageExtensions)
+INSERT INTO ImageType (ImageTypeId, ImageTypeName, ImageExtensions)
 VALUES
-('病理图', '["mrxs", "tif"]');
+(1, '病理图', '["mrxs", "tif"]');
 
 # 数据集表 (现在的数据集表表达一个较大的概念，在编码时将其设定为和ImageGroup表的父目录，形成两层目录来确定一组图片)
 CREATE TABLE Project (
@@ -144,7 +144,7 @@ CREATE TABLE LLMTaskType (
     LLMTaskTypeName VARCHAR(255) NOT NULL, 	                     -- 任务名称，非空
   	isPreProcessTask TINYINT NOT NULL,												   -- 是否为预处理任务
     Prompt VARCHAR(3000) NOT NULL, 											 				 -- 定义具体的prompt
-    Description VARCHAR(3000) NOT NULL,													 -- 任务描述，描述任务具体完成任务和对输入输出的简单描述
+    Description VARCHAR(3000) NOT NULL												 -- 任务描述，描述任务具体完成任务和对输入输出的简单描述
 );
 
 INSERT INTO LLMTaskType (LLMTaskTypeName, isPreProcessTask, Prompt, Description)
